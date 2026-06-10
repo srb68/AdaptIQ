@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdaptIQ — Setup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <link rel="stylesheet" href="css/ui.css">
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="page-shell">
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div class="navbar-bolt">
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 2L3 9.5H8L7 14L13 6.5H8L9 2Z" fill="#000" stroke="#000" stroke-width="0.5" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <button class="profile-pill" id="nav-profile-pill">
+        <span class="avatar-circle"></span>
+        <span id="nav-profile-label">PROFILE ▾</span>
+      </button>
+    </nav>
+
+    <!-- Main content -->
+    <div class="main-content">
+
+      <!-- ─── VIEW: JD Input (Screen 2) ─── -->
+      <div id="view-jd" class="split-layout">
+        <!-- Left: wordmark + JD textarea -->
+        <div class="split-left">
+          <div>
+            <div class="wordmark">AdaptIQ</div>
+            <div class="wordmark-sub">ADAPTIVE LEARNING INTELLIGENCE</div>
+          </div>
+
+          <div class="section-label">JOB DESCRIPTION</div>
+
+          <textarea class="jd-textarea" id="jd-textarea"
+            placeholder="Paste the job description here. AdaptIQ will generate tailored interview questions based on the role, requirements, and your cognitive profile."
+          ></textarea>
+
+          <div class="left-bottom">
+            <div class="upload-bar">
+              <span class="upload-bar-name" id="resume-filename">No resume uploaded</span>
+              <label class="upload-btn" for="resume-input">Upload Resume</label>
+              <input type="file" id="resume-input" accept=".pdf,.doc,.docx" style="display:none">
+            </div>
+            <button class="cta-btn" id="btn-start-generate" style="border-radius:4px;">
+              START SESSION →
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: mode selection -->
+        <div class="split-right">
+          <div class="panel-header">SELECT A MODE</div>
+
+          <div class="mode-cards">
+            <div class="mode-card selected" data-mode="adhd">
+              <div class="mode-left">
+                <div class="mode-num">1</div>
+                <div class="mode-tags">
+                  <span class="mode-tag">FOCUS</span>
+                  <span class="mode-tag">ENGAGEMENT</span>
+                </div>
+              </div>
+              <div class="mode-name">ADHD</div>
+            </div>
+
+            <div class="mode-card" data-mode="anxiety">
+              <div class="mode-left">
+                <div class="mode-num">2</div>
+                <div class="mode-tags">
+                  <span class="mode-tag">CALM</span>
+                  <span class="mode-tag">CLARITY</span>
+                </div>
+              </div>
+              <div class="mode-name">ANXIETY</div>
+            </div>
+
+            <div class="mode-card" data-mode="asd">
+              <div class="mode-left">
+                <div class="mode-num">3</div>
+                <div class="mode-tags">
+                  <span class="mode-tag">ORDER</span>
+                  <span class="mode-tag">PROGRESS</span>
+                </div>
+              </div>
+              <div class="mode-name">ASD</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── VIEW: Generating (Screen 3) ─── -->
+      <div id="view-generating" class="generating-wrap" style="display:none;">
+        <div class="gen-card">
+          <i class="ti ti-loader-2 gen-spinner"></i>
+          <div>
+            <div class="gen-title">Tailoring your session.</div>
+            <div class="gen-subtitle" style="margin-top:6px;">Analyzing your profile and context…</div>
+          </div>
+
+          <div class="gen-steps" id="gen-steps">
+            <div class="gen-step done" data-label="Reading cognitive profile">
+              <div class="gen-step-dot"></div>
+              <span class="gen-step-label">Reading cognitive profile</span>
+            </div>
+            <div class="gen-step active" data-label="Parsing job description">
+              <div class="gen-step-dot"></div>
+              <span class="gen-step-label">Parsing job description</span>
+            </div>
+            <div class="gen-step idle" data-label="Generating question set">
+              <div class="gen-step-dot"></div>
+              <span class="gen-step-label">Generating question set</span>
+            </div>
+            <div class="gen-step idle" data-label="Calibrating thresholds">
+              <div class="gen-step-dot"></div>
+              <span class="gen-step-label">Calibrating thresholds</span>
+            </div>
+          </div>
+
+          <button class="gen-see-btn" id="btn-see-questions">SEE QUESTIONS →</button>
+        </div>
+      </div>
+
+      <!-- ─── VIEW: Question Picker (Screen 4) ─── -->
+      <div id="view-qpicker" class="split-layout" style="display:none;">
+        <!-- Left: summary + start -->
+        <div class="qpicker-left">
+          <div class="qpicker-header">
+            <i class="ti ti-circle-check qpicker-icon"></i>
+            <div class="qpicker-title" id="qpicker-count">12 questions ready.</div>
+            <div class="qpicker-sub">Select which types to include in your session.</div>
+            <div class="qpicker-hint" id="qpicker-hint">4 TYPES · 12 QUESTIONS</div>
+          </div>
+
+          <button class="start-btn" id="btn-start-session">Start session →</button>
+        </div>
+
+        <!-- Right: question type checkboxes -->
+        <div class="split-right">
+          <div class="panel-header">QUESTION TYPES</div>
+
+          <div class="qtype-rows" id="qtype-rows">
+            <div class="qtype-row checked" data-type="Behavioral" data-count="3">
+              <div class="qtype-check">
+                <svg class="qtype-check-mark" viewBox="0 0 8 8" fill="none">
+                  <path d="M1.5 4L3.5 6L6.5 2" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="qtype-name">Behavioral</span>
+              <span class="qtype-count">3</span>
+            </div>
+
+            <div class="qtype-row checked" data-type="Technical" data-count="2">
+              <div class="qtype-check">
+                <svg class="qtype-check-mark" viewBox="0 0 8 8" fill="none">
+                  <path d="M1.5 4L3.5 6L6.5 2" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="qtype-name">Technical</span>
+              <span class="qtype-count">2</span>
+            </div>
+
+            <div class="qtype-row checked" data-type="Situational" data-count="3">
+              <div class="qtype-check">
+                <svg class="qtype-check-mark" viewBox="0 0 8 8" fill="none">
+                  <path d="M1.5 4L3.5 6L6.5 2" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="qtype-name">Situational</span>
+              <span class="qtype-count">3</span>
+            </div>
+
+            <div class="qtype-row checked" data-type="Motivational" data-count="2">
+              <div class="qtype-check">
+                <svg class="qtype-check-mark" viewBox="0 0 8 8" fill="none">
+                  <path d="M1.5 4L3.5 6L6.5 2" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="qtype-name">Motivational</span>
+              <span class="qtype-count">2</span>
+            </div>
+
+            <div class="qtype-row" data-type="Problem Solving" data-count="1">
+              <div class="qtype-check">
+                <svg class="qtype-check-mark" viewBox="0 0 8 8" fill="none">
+                  <path d="M1.5 4L3.5 6L6.5 2" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="qtype-name">Problem Solving</span>
+              <span class="qtype-count">1</span>
+            </div>
+
+            <div class="qtype-row" data-type="Leadership" data-count="1">
+              <div class="qtype-check">
+                <svg class="qtype-check-mark" viewBox="0 0 8 8" fill="none">
+                  <path d="M1.5 4L3.5 6L6.5 2" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="qtype-name">Leadership</span>
+              <span class="qtype-count">1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main-content -->
+
+    <!-- Footer -->
+    <footer class="footer-bar">
+      AdaptIQ tailors all interventions and sensitivity thresholds to the selected profile.
+    </footer>
+  </div>
+
+  <script src="js/bg-canvas.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initCanvas(document.getElementById('bg-canvas'));
+
+      // ── Restore state from auth ──
+      const savedProfile = localStorage.getItem('adaptiq_profile') || 'adhd';
+      const savedName    = localStorage.getItem('adaptiq_name')    || '';
+      const savedJD      = localStorage.getItem('adaptiq_jd')      || '';
+
+      if (savedJD) document.getElementById('jd-textarea').value = savedJD;
+
+      const profileLabel = document.getElementById('nav-profile-label');
+      if (savedName) profileLabel.textContent = savedName.split(' ')[0].toUpperCase() + ' ▾';
+
+      // Select the saved mode card
+      let selectedMode = savedProfile;
+      function selectMode(mode) {
+        document.querySelectorAll('.mode-card').forEach(c => c.classList.toggle('selected', c.dataset.mode === mode));
+        selectedMode = mode;
+      }
+      selectMode(savedProfile);
+
+      document.querySelectorAll('.mode-card').forEach(card => {
+        card.addEventListener('click', () => selectMode(card.dataset.mode));
+      });
+
+      // ── Resume upload label ──
+      document.getElementById('resume-input')?.addEventListener('change', (e) => {
+        const f = e.target.files[0];
+        if (f) document.getElementById('resume-filename').textContent = f.name;
+      });
+
+      // ── Views ──
+      function showView(id) {
+        ['view-jd', 'view-generating', 'view-qpicker'].forEach(v => {
+          const el = document.getElementById(v);
+          if (el) el.style.display = v === id ? (v === 'view-jd' || v === 'view-qpicker' ? 'flex' : 'flex') : 'none';
+        });
+      }
+
+      // ── Start generate → generating screen ──
+      document.getElementById('btn-start-generate')?.addEventListener('click', () => {
+        const jd = document.getElementById('jd-textarea').value.trim();
+        localStorage.setItem('adaptiq_jd', jd);
+        localStorage.setItem('adaptiq_profile', selectedMode);
+        showView('view-generating');
+        runGeneratingAnimation();
+      });
+
+      // ── Generating animation ──
+      function runGeneratingAnimation() {
+        const stepEls = document.querySelectorAll('#gen-steps .gen-step');
+        let idx = 0;
+
+        function advance() {
+          if (idx > 0) stepEls[idx - 1].className = 'gen-step done';
+          if (idx < stepEls.length) {
+            stepEls[idx].className = 'gen-step active';
+            idx++;
+            setTimeout(advance, 900 + Math.random() * 400);
+          } else {
+            // All done — show button
+            const btn = document.getElementById('btn-see-questions');
+            btn.classList.add('visible');
+          }
+        }
+
+        // Reset
+        stepEls.forEach(s => s.className = 'gen-step idle');
+        advance();
+      }
+
+      document.getElementById('btn-see-questions')?.addEventListener('click', () => {
+        showView('view-qpicker');
+        updateQPickerHint();
+      });
+
+      // ── Question type toggle ──
+      document.querySelectorAll('.qtype-row').forEach(row => {
+        row.addEventListener('click', () => {
+          row.classList.toggle('checked');
+          updateQPickerHint();
+        });
+      });
+
+      function updateQPickerHint() {
+        const checked = document.querySelectorAll('.qtype-row.checked');
+        let totalQ = 0;
+        checked.forEach(r => { totalQ += parseInt(r.dataset.count || 0, 10); });
+        document.getElementById('qpicker-hint').textContent =
+          `${checked.length} TYPE${checked.length !== 1 ? 'S' : ''} · ${totalQ} QUESTION${totalQ !== 1 ? 'S' : ''}`;
+        document.getElementById('qpicker-count').textContent = `${totalQ} questions ready.`;
+      }
+
+      // ── Start session → session.html ──
+      document.getElementById('btn-start-session')?.addEventListener('click', () => {
+        const jd = document.getElementById('jd-textarea').value.trim();
+        localStorage.setItem('adaptiq_jd', jd);
+        localStorage.setItem('adaptiq_profile', selectedMode);
+        window.location.href = 'session.html';
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdaptIQ — Live Session</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- CDN Dependencies (unchanged from original) -->
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/meyda/dist/web/meyda.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="css/ui.css">
+</head>
+<body>
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- ── Status orb ── -->
+  <div id="status-orb" class="orb-blue" title="System status"></div>
+  <div id="orb-card" class="hidden">
+    <div id="orb-card-label">System</div>
+    <div id="orb-card-desc">All systems nominal.</div>
+    <button id="orb-card-dismiss">DISMISS</button>
+  </div>
+
+  <!-- ── Gaze dot (technical mode only) ── -->
+  <div id="gaze-dot"></div>
+
+  <!-- ── Warmup pill ── -->
+  <div id="warmup-pill">Warming up…</div>
+
+  <div class="page-shell">
+    <!-- Navbar -->
+    <nav class="navbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="navbar-bolt">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 2L3 9.5H8L7 14L13 6.5H8L9 2Z" fill="#000" stroke="#000" stroke-width="0.5" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span id="session-timer">00:00</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="topbar-profile-label">ADHD</span>
+        <button class="profile-pill" id="nav-profile-pill">
+          <span class="avatar-circle"></span>
+          <span id="nav-name-label">PROFILE ▾</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Session layout -->
+    <div class="main-content" style="position:relative;">
+
+      <!-- Dashboard screen -->
+      <div id="screen-dashboard" class="screen active" style="flex-direction:column;">
+        <div class="session-layout">
+
+          <!-- 1. Camera feed zone -->
+          <div class="camera-zone">
+            <div id="video-container">
+              <video id="video-feed" autoplay muted playsinline></video>
+              <canvas id="face-overlay-canvas"></canvas>
+            </div>
+
+            <!-- Live indicator -->
+            <div class="live-dot"></div>
+
+            <!-- Name tag -->
+            <div class="cam-name-tag" id="cam-name-tag">Candidate</div>
+
+            <!-- Placeholder icon when no feed -->
+            <div class="cam-placeholder" id="cam-placeholder">
+              <i class="ti ti-user-circle"></i>
+            </div>
+
+            <!-- Camera view mode buttons -->
+            <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:5;" class="cam-mode-toggle">
+              <button id="cam-btn-default"    class="util-icon-btn active" title="Default view"><i class="ti ti-layout-sidebar"></i></button>
+              <button id="cam-btn-minimized"  class="util-icon-btn" title="Picture-in-picture"><i class="ti ti-picture-in-picture"></i></button>
+              <button id="cam-btn-fullscreen" class="util-icon-btn" title="Fullscreen"><i class="ti ti-maximize"></i></button>
+            </div>
+          </div>
+
+          <!-- 2. Question card -->
+          <div class="question-card" id="question-card">
+            <div class="question-meta">
+              <span id="question-category">Basic Information</span>
+              <span id="question-progress">1 / 26</span>
+            </div>
+            <div id="question-text">Tell me about yourself and your background.</div>
+            <div class="question-nav">
+              <button class="q-nav-btn" id="btn-prev-q" disabled>← Prev</button>
+              <button class="q-nav-btn" id="btn-next-q">Next →</button>
+            </div>
+          </div>
+
+          <!-- 3. Bottom control bar -->
+          <div class="bottom-controls">
+            <!-- Left: panel toggles -->
+            <div class="ctrl-left">
+              <button class="panel-toggle" id="btn-coach">COACH</button>
+              <button class="panel-toggle" id="btn-score">SCORES</button>
+              <button class="panel-toggle" id="btn-signals">SIGNALS</button>
+            </div>
+
+            <!-- Center: call controls -->
+            <div class="ctrl-center">
+              <button class="call-btn" id="btn-mic-toggle" title="Toggle microphone">
+                <i class="ti ti-microphone" id="mic-icon"></i>
+              </button>
+              <button class="call-btn" id="btn-cam-toggle" title="Toggle camera">
+                <i class="ti ti-video" id="cam-icon"></i>
+              </button>
+              <button class="call-btn call-btn-end" id="btn-end-session" title="End session">
+                <i class="ti ti-phone-off"></i>
+              </button>
+            </div>
+
+            <!-- Right: settings -->
+            <div class="ctrl-right">
+              <button class="util-icon-btn" id="btn-settings" title="Settings">
+                <i class="ti ti-settings"></i>
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /session-layout -->
+
+        <!-- ── Slide-up panels (position:absolute over session-layout) ── -->
+        <!-- Coach panel -->
+        <div class="overlay-panel" id="panel-coach">
+          <div class="overlay-panel-head">
+            <span class="overlay-panel-title">AI Coach</span>
+            <button class="overlay-panel-close">×</button>
+          </div>
+          <p id="coach-tip-text">Your AI coach will provide real-time guidance here during your session.</p>
+        </div>
+
+        <!-- Scores panel -->
+        <div class="overlay-panel" id="panel-score">
+          <div class="overlay-panel-head">
+            <span class="overlay-panel-title">Session Scores</span>
+            <button class="overlay-panel-close">×</button>
+          </div>
+          <div class="score-bars">
+            <div class="score-row">
+              <span class="score-row-label">Eye Contact</span>
+              <div class="score-bar-track"><div class="score-bar-fill" id="psb-eye" style="width:0%"></div></div>
+              <span class="score-val" id="ps-eye">0</span>
+            </div>
+            <div class="score-row">
+              <span class="score-row-label">Head Stability</span>
+              <div class="score-bar-track"><div class="score-bar-fill" id="psb-head" style="width:0%"></div></div>
+              <span class="score-val" id="ps-head">0</span>
+            </div>
+            <div class="score-row">
+              <span class="score-row-label">Vocal Confidence</span>
+              <div class="score-bar-track"><div class="score-bar-fill" id="psb-vocal" style="width:0%"></div></div>
+              <span class="score-val" id="ps-vocal">0</span>
+            </div>
+            <div class="score-row">
+              <span class="score-row-label">Clarity</span>
+              <div class="score-bar-track"><div class="score-bar-fill" id="psb-clarity" style="width:0%"></div></div>
+              <span class="score-val" id="ps-clarity">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Signals panel -->
+        <div class="overlay-panel" id="panel-signals">
+          <div class="overlay-panel-head">
+            <span class="overlay-panel-title">Live Signals</span>
+            <button class="overlay-panel-close">×</button>
+          </div>
+          <div class="signal-chips">
+            <span class="signal-chip green"  id="sig-eye">Eye Contact: —</span>
+            <span class="signal-chip green"  id="sig-calm">Calm: —</span>
+            <span class="signal-chip yellow" id="sig-voice">Voice: —</span>
+          </div>
+        </div>
+
+      </div><!-- /screen-dashboard -->
+
+      <!-- Summary screen -->
+      <div id="screen-summary" class="screen" style="align-items:center;justify-content:center;">
+        <div class="summary-card">
+          <div>
+            <div class="section-label" style="margin-bottom:8px;">SESSION COMPLETE</div>
+            <div class="summary-grade" id="summary-grade">—</div>
+            <div style="font-family:var(--f-body);font-size:10px;color:var(--txt2);margin-top:6px;" id="summary-subtitle">Session data loading…</div>
+          </div>
+          <div class="summary-stats">
+            <div class="summary-stat">
+              <span class="summary-stat-label">Eye Contact</span>
+              <span class="summary-stat-val" id="sum-eye">—</span>
+            </div>
+            <div class="summary-stat">
+              <span class="summary-stat-label">Head Stability</span>
+              <span class="summary-stat-val" id="sum-head">—</span>
+            </div>
+            <div class="summary-stat">
+              <span class="summary-stat-label">Vocal Confidence</span>
+              <span class="summary-stat-val" id="sum-vocal">—</span>
+            </div>
+            <div class="summary-stat">
+              <span class="summary-stat-label">Overall</span>
+              <span class="summary-stat-val" id="sum-overall">—</span>
+            </div>
+          </div>
+          <div id="summary-insights" style="font-family:var(--f-body);font-size:10px;color:var(--txt2);line-height:1.7;max-height:120px;overflow-y:auto;">
+            Generating your debrief…
+          </div>
+          <div class="summary-actions">
+            <button class="btn-outline" id="btn-new-session" style="flex:1;">NEW SESSION</button>
+            <button class="cta-btn" id="btn-export" style="flex:1;border-radius:4px;">EXPORT PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden profile screen (required for ui.js initProfileScreen compatibility) -->
+      <div id="screen-profile" class="screen" style="display:none !important;">
+        <!-- Hidden profile cards — auto-clicked to start session from localStorage -->
+        <div class="profile-card" data-id="adhd"    style="display:none;"></div>
+        <div class="profile-card" data-id="anxiety" style="display:none;"></div>
+        <div class="profile-card" data-id="asd"     style="display:none;"></div>
+        <div class="profile-card" data-id="general" style="display:none;"></div>
+        <button id="lp-cta-btn" style="display:none;"></button>
+        <span   id="lp-cta-text" style="display:none;"></span>
+        <input  id="demo-mode-toggle" type="checkbox" style="display:none;">
+        <input  id="api-key-input" type="password" style="display:none;">
+      </div>
+
+    </div><!-- /main-content -->
+
+    <!-- Footer -->
+    <footer class="footer-bar">
+      AdaptIQ tailors all interventions and sensitivity thresholds to the selected profile.
+    </footer>
+  </div>
+
+  <!-- Legacy hidden elements required by ui.js / brain.js -->
+  <div class="legacy-hidden" aria-hidden="true">
+    <canvas id="score-ring-canvas" width="100" height="100"></canvas>
+    <span id="score-overall">0</span>
+    <span id="score-grade">—</span>
+    <span id="score-eye">0</span>
+    <span id="score-head">0</span>
+    <span id="score-vocal">0</span>
+    <span id="score-clarity">0</span>
+    <span id="sbar-eye"></span>
+    <span id="sbar-head"></span>
+    <span id="sbar-vocal"></span>
+    <span id="sbar-clarity"></span>
+    <span id="metric-gds">0</span>
+    <span id="metric-hpd">0</span>
+    <span id="metric-bra">0</span>
+    <span id="metric-ves">0</span>
+    <span id="metric-sr">0</span>
+    <span id="metric-osr">0</span>
+    <span id="metric-et">0</span>
+    <span id="metric-ces">0</span>
+    <span id="metric-silr">0</span>
+    <span id="metric-pvs">0</span>
+    <span id="bar-bra"></span>
+    <span id="bar-sr"></span>
+    <span id="bar-osr"></span>
+    <span id="bar-pvs"></span>
+    <canvas id="spark-gds"  width="80" height="24"></canvas>
+    <canvas id="spark-hpd"  width="80" height="24"></canvas>
+    <canvas id="spark-ves"  width="80" height="24"></canvas>
+    <canvas id="spark-ces"  width="80" height="24"></canvas>
+    <canvas id="spark-silr" width="80" height="24"></canvas>
+    <button id="mode-btn-simple"></button>
+    <button id="mode-btn-technical"></button>
+    <input  id="mode-toggle" type="checkbox">
+    <span   id="mode-label-simple"></span>
+    <span   id="mode-label-technical"></span>
+    <div class="sensor-dot inactive" id="status-dot-camera">
+      <span class="sensor-dot-indicator"></span>
+      <span class="sensor-dot-tooltip">Camera inactive</span>
+    </div>
+    <div class="sensor-dot inactive" id="status-dot-mic">
+      <span class="sensor-dot-indicator"></span>
+      <span class="sensor-dot-tooltip">Microphone inactive</span>
+    </div>
+    <div class="sensor-dot inactive" id="status-dot-ai">
+      <span class="sensor-dot-indicator"></span>
+      <span class="sensor-dot-tooltip">AI offline</span>
+    </div>
+    <div class="sensor-dot nominal" id="status-dot-system">
+      <span class="sensor-dot-indicator"></span>
+      <span class="sensor-dot-tooltip">Systems nominal</span>
+    </div>
+  </div>
+
+  <!-- ── Inline JS (unchanged from original index.html) ── -->
+
+  <script>
+    // === EVENT BUS === //
+    const Bus = (() => {
+      const subs = {};
+      return {
+        on(evt, fn)   { (subs[evt] ||= []).push(fn); },
+        off(evt, fn)  { subs[evt] = (subs[evt] || []).filter(f => f !== fn); },
+        emit(evt, data) { (subs[evt] || []).forEach(fn => fn(data)); }
+      };
+    })();
+  </script>
+
+  <script>
+    // === SENSORS MODULE === //
+// === ADAPTIQ SENSORS MODULE === //
+
+// ─── SignalBuffer ────────────────────────────────────────────────────────────
+class SignalBuffer {
+  constructor(windowSize = 60) {
+    this._size = windowSize;
+    this._buf = [];
+  }
+
+  push(value) {
+    this._buf.push(value);
+    if (this._buf.length > this._size) this._buf.shift();
+  }
+
+  values() { return [...this._buf]; }
+
+  mean() {
+    if (!this._buf.length) return 0;
+    return this._buf.reduce((a, b) => a + b, 0) / this._buf.length;
+  }
+
+  stddev() {
+    if (this._buf.length < 2) return 0;
+    const m = this.mean();
+    const variance = this._buf.reduce((sum, v) => sum + (v - m) ** 2, 0) / this._buf.length;
+    return Math.sqrt(variance);
+  }
+
+  zScore(currentValue) {
+    const sd = this.stddev();
+    if (sd === 0) return 0;
+    return (currentValue - this.mean()) / sd;
+  }
+}
+
+window.SignalBuffer = SignalBuffer;
+
+// ─── FaceEngine ──────────────────────────────────────────────────────────────
+const FaceEngine = (() => {
+  const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+
+  let videoEl = null;
+  let running = false;
+  let rafId = null;
+  let latest = {};
+
+  const etBuf  = new SignalBuffer(60);
+  const hpdBuf = new SignalBuffer(60);
+  const braBuf = new SignalBuffer(60);
+
+  let blinkCount = 0;
+  let blinkTimestamps = [];
+  let earBelow = 0;
+  const EAR_THRESHOLD = 0.23;  // raised from 0.21 — vladmandic landmarks run slightly tighter
+  const BLINK_MIN_FRAMES = 2;
+  let pitchBaseline = null;
+  let pitchSamples = [];
+  let sessionStartTime = null;
+
+  function dist(p1, p2) {
+    return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+  }
+
+  function eyeAspectRatio(pts) {
+    const vertical1 = dist(pts[1], pts[5]);
+    const vertical2 = dist(pts[2], pts[4]);
+    const horizontal = dist(pts[0], pts[3]);
+    return (vertical1 + vertical2) / (2 * horizontal);
+  }
+
+  function computeET(expressions) {
+    // Only negative emotions signal tension — happy/surprised are not stress indicators
+    const raw = Math.min(100, ((expressions?.angry ?? 0) + (expressions?.fearful ?? 0) +
+                               (expressions?.disgusted ?? 0) + (expressions?.sad ?? 0)) * 100);
+    etBuf.push(raw);
+    return Math.round(etBuf.mean());
+  }
+
+  function computeHPD(landmarks) {
+    try {
+      const pts = landmarks.positions;
+      const noseTip   = pts[30];
+      const leftEdge  = pts[0];
+      const rightEdge = pts[16];
+
+      const noseToLeft  = dist(noseTip, leftEdge);
+      const noseToRight = dist(noseTip, rightEdge);
+      const yawRatio = noseToLeft / (noseToRight + 1e-6);
+      const yaw = Math.abs(yawRatio - 1) * 100;
+
+      const leftEye  = pts[36];
+      const rightEye = pts[45];
+      const eyeMidY  = (leftEye.y + rightEye.y) / 2;
+      const eyeSpan  = dist(leftEye, rightEye);
+      const rawPitch = (noseTip.y - eyeMidY) / (eyeSpan + 1e-6) * 100;
+
+      // Calibrate pitch baseline from first 30 frames so neutral pose reads 0
+      if (pitchSamples.length < 30) {
+        pitchSamples.push(rawPitch);
+        pitchBaseline = pitchSamples.reduce((a, b) => a + b, 0) / pitchSamples.length;
+      }
+      const pitch = Math.abs(rawPitch - (pitchBaseline ?? rawPitch));
+
+      const raw = Math.min(100, Math.sqrt(yaw ** 2 + pitch ** 2));
+      hpdBuf.push(raw);
+      return Math.round(hpdBuf.mean());
+    } catch {
+      return 0;
+    }
+  }
+
+  function computeBRA(landmarks) {
+    try {
+      const pts = landmarks.positions;
+      const leftEyePts  = [pts[36], pts[37], pts[38], pts[39], pts[40], pts[41]];
+      const rightEyePts = [pts[42], pts[43], pts[44], pts[45], pts[46], pts[47]];
+      const ear = (eyeAspectRatio(leftEyePts) + eyeAspectRatio(rightEyePts)) / 2;
+
+      if (ear < EAR_THRESHOLD) {
+        earBelow++;
+      } else {
+        if (earBelow >= BLINK_MIN_FRAMES) {
+          blinkTimestamps.push(Date.now());
+        }
+        earBelow = 0;
+      }
+
+      const now = Date.now();
+      blinkTimestamps = blinkTimestamps.filter(t => now - t < 60000);
+
+      // Normalize by elapsed time so BRA doesn't spike for the first 60s of a session
+      const elapsedSecs = sessionStartTime ? (now - sessionStartTime) / 1000 : 60;
+      const windowSecs  = Math.min(60, Math.max(elapsedSecs, 10));
+      const blinksPerMin = (blinkTimestamps.length / windowSecs) * 60;
+
+      const raw = Math.min(100, Math.abs(blinksPerMin - 17) / 17 * 100);
+      braBuf.push(raw);
+      return Math.round(braBuf.mean());
+    } catch {
+      return 0;
+    }
+  }
+
+  const zero = () => ({ et: 0, hpd: 0, bra: 0, landmarks: null, expressions: null, bbox: null });
+
+  async function init(video) {
+    videoEl = video;
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+    ]);
+    Bus.emit('models:loaded', {});
+  }
+
+  function _loop() {
+    if (!running) return;
+    rafId = requestAnimationFrame(async () => {
+      try {
+        const detection = await faceapi
+          .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks()
+          .withFaceExpressions();
+
+        if (!detection) {
+          latest = zero();
+          Bus.emit('signal:face', latest);
+        } else {
+          const et  = computeET(detection.expressions);
+          const hpd = computeHPD(detection.landmarks);
+          const bra = computeBRA(detection.landmarks);
+          const bbox = detection.detection.box;
+          latest = { et, hpd, bra, landmarks: detection.landmarks, expressions: detection.expressions, bbox };
+          Bus.emit('signal:face', latest);
+        }
+      } catch (err) {
+        console.warn('[FaceEngine] frame error:', err);
+      }
+      _loop();
+    });
+  }
+
+  function start() { running = true; sessionStartTime = Date.now(); pitchBaseline = null; pitchSamples = []; _loop(); }
+  function stop()  { running = false; if (rafId) cancelAnimationFrame(rafId); }
+  function getLatest() { return latest; }
+
+  return { init, start, stop, getLatest };
+})();
+
+window.FaceEngine = FaceEngine;
+
+// ─── GazeEngine ──────────────────────────────────────────────────────────────
+const GazeEngine = (() => {
+  let faceMesh = null;
+  let videoEl  = null;
+  let loopId   = null;
+  let running  = false;
+  let latest   = { gds: 0, osr: 0, x: 0, y: 0 };
+
+  let baseline     = null;
+  let calibrating  = false;
+  let calibSamples = [];
+  let calibMap     = [];
+  let calibScaleX  = null;
+  let calibScaleY  = null;
+  let calibrationCallback = null;
+
+  const xBuf = new SignalBuffer(30);
+  const yBuf = new SignalBuffer(30);
+  const gazeHistory = [];
+
+  const L_IRIS = 468, R_IRIS = 473;
+  const L_OUTER = 33,  L_INNER = 133, L_TOP = 159, L_BOT = 145;
+  const R_INNER = 362, R_OUTER = 263, R_TOP = 386, R_BOT = 374;
+
+  function _irisRatio(lm) {
+    const lx = (lm[L_IRIS].x - lm[L_OUTER].x) / (lm[L_INNER].x - lm[L_OUTER].x + 1e-6);
+    const ly = (lm[L_IRIS].y - lm[L_TOP].y)   / (lm[L_BOT].y   - lm[L_TOP].y   + 1e-6);
+    const rx = (lm[R_IRIS].x - lm[R_INNER].x) / (lm[R_OUTER].x - lm[R_INNER].x + 1e-6);
+    const ry = (lm[R_IRIS].y - lm[R_TOP].y)   / (lm[R_BOT].y   - lm[R_TOP].y   + 1e-6);
+    return { avgX: (lx + rx) / 2, avgY: (ly + ry) / 2 };
+  }
+
+  function _irisToScreen(iris) {
+    if (!baseline) return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    const dx = iris.avgX - baseline.avgX;
+    const dy = iris.avgY - baseline.avgY;
+    const scX = calibScaleX ?? (window.innerWidth  / 0.3);
+    const scY = calibScaleY ?? (window.innerHeight / 0.3);
+    const sx = window.innerWidth  / 2 + dx * scX;
+    const sy = window.innerHeight / 2 + dy * scY;
+    return {
+      x: Math.max(0, Math.min(window.innerWidth,  sx)),
+      y: Math.max(0, Math.min(window.innerHeight, sy)),
+    };
+  }
+
+  function _onResults(results) {
+    if (!results.multiFaceLandmarks?.length) return;
+    const lm = results.multiFaceLandmarks[0];
+    if (!lm[L_IRIS] || !lm[R_IRIS]) return;
+
+    const iris = _irisRatio(lm);
+
+    if (calibrating) {
+      if (calibrationCallback) calibrationCallback(iris);
+      else calibSamples.push(iris);
+      return;
+    }
+
+    if (!running || !baseline) return;
+
+    const { x, y } = _irisToScreen(iris);
+    xBuf.push(x);
+    yBuf.push(y);
+
+    const diag = Math.sqrt(window.innerWidth ** 2 + window.innerHeight ** 2);
+    const gds  = Math.min(100,
+      Math.sqrt(xBuf.stddev() ** 2 + yBuf.stddev() ** 2) / diag * 100
+    );
+
+    gazeHistory.push({ x, y });
+    if (gazeHistory.length > 60) gazeHistory.shift();
+
+    const mX = window.innerWidth  * 0.2;
+    const mY = window.innerHeight * 0.2;
+    const outside = gazeHistory.filter(p =>
+      p.x < mX || p.x > window.innerWidth  - mX ||
+      p.y < mY || p.y > window.innerHeight - mY
+    ).length;
+    const osr = (outside / gazeHistory.length) * 100;
+
+    latest = { gds: Math.round(gds), osr: Math.round(osr), x, y };
+    Bus.emit('signal:gaze', latest);
+  }
+
+  async function init(video) {
+    videoEl = video;
+
+    if (typeof FaceMesh === 'undefined') {
+      console.warn('[GazeEngine] MediaPipe FaceMesh not loaded — gaze disabled');
+      return;
+    }
+
+    faceMesh = new FaceMesh({
+      locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`
+    });
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+    faceMesh.onResults(_onResults);
+    await faceMesh.initialize();
+
+    loopId = setInterval(async () => {
+      if (videoEl.readyState >= 2) {
+        try { await faceMesh.send({ image: videoEl }); }
+        catch (e) { console.warn('[GazeEngine] send error:', e); }
+      }
+    }, 100);
+  }
+
+  function startMultiPointCalibration(screenFracPoints) {
+    return new Promise((resolve) => {
+      calibrating = true;
+      calibMap    = [];
+      let pointIndex  = 0;
+      let rawHistory  = [];
+      let stableSamples = [];
+
+      const SMOOTH_N         = 5;
+      const STABILITY_THRESH = 0.04;
+      const REQUIRED_STABLE  = 15;
+
+      const CIRC = 2 * Math.PI * 22;
+      const svgNS = 'http://www.w3.org/2000/svg';
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position:fixed;inset:0;z-index:9998;background:rgba(5,8,16,0.96);pointer-events:none;
+      `;
+
+      const ring = document.createElement('div');
+      ring.style.cssText = `
+        position:absolute;width:54px;height:54px;margin:-27px 0 0 -27px;
+        border-radius:50%;border:1px solid rgba(0,229,255,0.18);
+      `;
+
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('width','54'); svg.setAttribute('height','54');
+      svg.style.cssText = `position:absolute;width:54px;height:54px;margin:-27px 0 0 -27px;
+        transform:rotate(-90deg);`;
+      const arc = document.createElementNS(svgNS, 'circle');
+      arc.setAttribute('cx','27'); arc.setAttribute('cy','27'); arc.setAttribute('r','22');
+      arc.setAttribute('fill','none'); arc.setAttribute('stroke','#00e5ff');
+      arc.setAttribute('stroke-width','2.5');
+      arc.setAttribute('stroke-dasharray', CIRC);
+      arc.setAttribute('stroke-dashoffset', CIRC);
+      svg.appendChild(arc);
+
+      const dot = document.createElement('div');
+      dot.style.cssText = `
+        position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;
+        border-radius:50%;background:#00e5ff;
+        box-shadow:0 0 14px #00e5ff,0 0 28px rgba(0,229,255,0.4);
+        transition:left 0.45s cubic-bezier(.4,0,.2,1),top 0.45s cubic-bezier(.4,0,.2,1);
+      `;
+
+      const lbl = document.createElement('p');
+      lbl.style.cssText = `
+        position:fixed;bottom:12%;left:50%;transform:translateX(-50%);
+        color:#e4e4e7;font-family:monospace;font-size:1rem;text-align:center;
+        text-shadow:0 0 8px rgba(0,229,255,0.4);pointer-events:none;
+      `;
+      lbl.textContent = 'Look at the dot — hold still until the ring fills';
+
+      const ctr = document.createElement('p');
+      ctr.style.cssText = `
+        position:fixed;bottom:calc(12% - 26px);left:50%;transform:translateX(-50%);
+        color:#6b7280;font-family:monospace;font-size:0.82rem;pointer-events:none;
+      `;
+      ctr.textContent = `Point 1 / ${screenFracPoints.length}`;
+
+      overlay.append(ring, svg, dot, lbl, ctr);
+      document.body.appendChild(overlay);
+
+      function moveDot(frac) {
+        const x = frac.x * window.innerWidth;
+        const y = frac.y * window.innerHeight;
+        [dot, ring, svg].forEach(el => {
+          el.style.left = x + 'px';
+          el.style.top  = y + 'px';
+        });
+        arc.setAttribute('stroke-dashoffset', CIRC);
+      }
+      moveDot(screenFracPoints[0]);
+
+      function finish() {
+        calibrating = false;
+        calibrationCallback = null;
+        clearTimeout(timeoutId);
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        _buildCalibration();
+        Bus.emit('calibration:complete', { type: 'gaze' });
+        resolve(calibMap);
+      }
+
+      const timeoutId = setTimeout(finish, 30000);
+
+      calibrationCallback = (iris) => {
+        rawHistory.push(iris);
+        if (rawHistory.length > SMOOTH_N) rawHistory.shift();
+        const smoothed = {
+          avgX: rawHistory.reduce((s, v) => s + v.avgX, 0) / rawHistory.length,
+          avgY: rawHistory.reduce((s, v) => s + v.avgY, 0) / rawHistory.length,
+        };
+
+        let isStable = true;
+        if (stableSamples.length > 0) {
+          const mX = stableSamples.reduce((s, v) => s + v.avgX, 0) / stableSamples.length;
+          const mY = stableSamples.reduce((s, v) => s + v.avgY, 0) / stableSamples.length;
+          isStable = Math.abs(smoothed.avgX - mX) < STABILITY_THRESH &&
+                     Math.abs(smoothed.avgY - mY) < STABILITY_THRESH;
+        }
+
+        if (isStable) {
+          stableSamples.push(smoothed);
+        } else {
+          stableSamples = [];
+          rawHistory    = [];
+        }
+
+        const progress = Math.min(1, stableSamples.length / REQUIRED_STABLE);
+        arc.setAttribute('stroke-dashoffset', CIRC * (1 - progress));
+        arc.setAttribute('stroke', progress > 0.85 ? '#00ff88' : '#00e5ff');
+        Bus.emit('gaze:calibration:progress', { pointIndex, progress });
+
+        if (stableSamples.length >= REQUIRED_STABLE) {
+          const avgX = stableSamples.reduce((s, v) => s + v.avgX, 0) / stableSamples.length;
+          const avgY = stableSamples.reduce((s, v) => s + v.avgY, 0) / stableSamples.length;
+          calibMap.push({ iris: { avgX, avgY }, screen: screenFracPoints[pointIndex] });
+          stableSamples = [];
+          rawHistory    = [];
+          pointIndex++;
+
+          if (pointIndex >= screenFracPoints.length) {
+            finish();
+          } else {
+            Bus.emit('gaze:calibration:next', { pointIndex });
+            ctr.textContent = `Point ${pointIndex + 1} / ${screenFracPoints.length}`;
+            arc.setAttribute('stroke', '#00e5ff');
+            setTimeout(() => moveDot(screenFracPoints[pointIndex]), 450);
+          }
+        }
+      };
+    });
+  }
+
+  function _buildCalibration() {
+    if (!calibMap.length) { baseline = null; return; }
+
+    const centerPt = calibMap.reduce((best, p) => {
+      const d  = Math.abs(p.screen.x - 0.5) + Math.abs(p.screen.y - 0.5);
+      const bd = Math.abs(best.screen.x - 0.5) + Math.abs(best.screen.y - 0.5);
+      return d < bd ? p : best;
+    }, calibMap[0]);
+    baseline = centerPt.iris;
+
+    if (calibMap.length < 3) return;
+
+    const xScales = [], yScales = [];
+    calibMap.forEach(p => {
+      const idx = p.iris.avgX - baseline.avgX;
+      const idy = p.iris.avgY - baseline.avgY;
+      const sdx = (p.screen.x - 0.5) * window.innerWidth;
+      const sdy = (p.screen.y - 0.5) * window.innerHeight;
+      if (Math.abs(idx) > 0.005) xScales.push(sdx / idx);
+      if (Math.abs(idy) > 0.005) yScales.push(sdy / idy);
+    });
+
+    const defX = window.innerWidth  / 0.3;
+    const defY = window.innerHeight / 0.3;
+
+    if (xScales.length) {
+      const c = xScales.reduce((a, b) => a + b) / xScales.length;
+      if (c > defX * 0.3 && c < defX * 3) calibScaleX = c;
+    }
+    if (yScales.length) {
+      const c = yScales.reduce((a, b) => a + b) / yScales.length;
+      if (c > defY * 0.3 && c < defY * 3) calibScaleY = c;
+    }
+  }
+
+  function startCalibration() {
+    return new Promise((resolve) => {
+      calibrating = true;
+      calibSamples = [];
+      calibrationCallback = null;
+      setTimeout(() => {
+        calibrating = false;
+        if (calibSamples.length > 5) {
+          baseline = {
+            avgX: calibSamples.reduce((s, v) => s + v.avgX, 0) / calibSamples.length,
+            avgY: calibSamples.reduce((s, v) => s + v.avgY, 0) / calibSamples.length,
+          };
+        } else {
+          baseline = { avgX: 0.5, avgY: 0.5 };
+        }
+        Bus.emit('calibration:complete', { type: 'gaze' });
+        resolve();
+      }, 2000);
+    });
+  }
+
+  function start() { running = true; }
+  function stop()  {
+    running = false;
+    if (loopId) { clearInterval(loopId); loopId = null; }
+  }
+  function getLatest() { return latest; }
+
+  return { init, startCalibration, startMultiPointCalibration, start, stop, getLatest };
+})();
+
+window.GazeEngine = GazeEngine;
+
+// ─── AudioEngine ─────────────────────────────────────────────────────────────
+const AudioEngine = (() => {
+  let audioCtx = null;
+  let analyser = null;
+  let meydaAnalyzer = null;
+  let recognition = null;
+  let intervalId = null;
+  let running = false;
+
+  let fullTranscript = '';
+  let wordTimestamps = [];
+
+  const rmsBuf       = new SignalBuffer(30);
+  const centroidBuf  = new SignalBuffer(30);
+  const silenceWindows = [];
+
+  let silenceThreshold = 0.01;
+  let ambientSamples = [];
+
+  let latestFeatures = { rms: 0, spectralCentroid: 0 };
+  let latest = { ves: 0, pvs: 0, silr: 0, sr: 0, transcript: '' };
+
+  function _rmsFromAnalyser() {
+    const buf = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buf);
+    const sum = buf.reduce((s, v) => s + v * v, 0);
+    return Math.sqrt(sum / buf.length);
+  }
+
+  function _setupSpeechRecognition() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          fullTranscript += t + ' ';
+          const words = t.trim().split(/\s+/).filter(Boolean).length;
+          wordTimestamps.push({ words, time: Date.now() });
+        }
+      }
+    };
+    recognition.onerror = (e) => console.warn('[AudioEngine] SR error:', e.error);
+    recognition.onend  = () => { if (running) recognition.start(); };
+  }
+
+  async function init(mediaStream) {
+    const stream = mediaStream || (await navigator.mediaDevices.getUserMedia({ audio: true, video: false }));
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    source.connect(analyser);
+
+    try {
+      meydaAnalyzer = Meyda.createMeydaAnalyzer({
+        audioContext: audioCtx,
+        source,
+        bufferSize: 2048,
+        featureExtractors: ['rms', 'spectralCentroid', 'zcr'],
+        callback: (features) => { latestFeatures = features; },
+      });
+    } catch (err) {
+      console.warn('[AudioEngine] Meyda init failed, using fallback RMS:', err);
+    }
+
+    _setupSpeechRecognition();
+  }
+
+  function _computeSignals() {
+    try {
+      const rms = (meydaAnalyzer && latestFeatures?.rms != null)
+        ? latestFeatures.rms
+        : _rmsFromAnalyser();
+      const centroid = latestFeatures?.spectralCentroid ?? 0;
+
+      rmsBuf.push(rms);
+      centroidBuf.push(centroid);
+
+      const ves = Math.min(100, Math.max(0, rmsBuf.zScore(rms)) * 25);
+
+      const centroidMean = centroidBuf.mean();
+      const pvs = centroidMean > 0
+        ? Math.min(100, (centroidBuf.stddev() / centroidMean) * 100)
+        : 0;
+
+      if (ambientSamples.length < 5) {
+        ambientSamples.push(rms);
+        const minAmbient = Math.min(...ambientSamples);
+        silenceThreshold = Math.max(0.005, Math.min(0.02, minAmbient * 2));
+      }
+      silenceWindows.push(rms < silenceThreshold);
+      if (silenceWindows.length > 8) silenceWindows.shift();
+      const silr = (silenceWindows.filter(Boolean).length / silenceWindows.length) * 100;
+
+      const now = Date.now();
+      wordTimestamps = wordTimestamps.filter(e => now - e.time < 60000);
+      const totalWords = wordTimestamps.reduce((s, e) => s + e.words, 0);
+      const sr = totalWords === 0 ? 0 : Math.min(100, Math.abs(totalWords - 135) / 135 * 100);
+
+      latest = {
+        ves: Math.round(ves),
+        pvs: Math.round(pvs),
+        silr: Math.round(silr),
+        sr: Math.round(sr),
+        transcript: fullTranscript,
+      };
+      Bus.emit('signal:audio', latest);
+    } catch (err) {
+      console.warn('[AudioEngine] compute error:', err);
+    }
+  }
+
+  function start() {
+    running = true;
+    if (meydaAnalyzer) meydaAnalyzer.start();
+    if (recognition) { try { recognition.start(); } catch {} }
+    intervalId = setInterval(_computeSignals, 2000);
+  }
+
+  function stop() {
+    running = false;
+    if (meydaAnalyzer) try { meydaAnalyzer.stop(); } catch {}
+    if (recognition)   try { recognition.stop();   } catch {}
+    if (intervalId)    clearInterval(intervalId);
+  }
+
+  function getLatest()    { return latest; }
+  function getTranscript(){ return fullTranscript; }
+
+  function reset() {
+    fullTranscript = '';
+    wordTimestamps = [];
+    silenceWindows.length = 0;
+    ambientSamples = [];
+    silenceThreshold = 0.01;
+  }
+
+  return { init, start, stop, reset, getLatest, getTranscript };
+})();
+
+window.AudioEngine = AudioEngine;
+
+// ─── SensorManager ───────────────────────────────────────────────────────────
+window.SensorManager = {
+  async init(videoElement, mediaStream) {
+    await FaceEngine.init(videoElement);
+    await GazeEngine.init(videoElement);
+    await AudioEngine.init(mediaStream);
+  },
+  startCalibration() { return GazeEngine.startCalibration(); },
+  startMultiPointCalibration(pts) { return GazeEngine.startMultiPointCalibration(pts); },
+  start() { FaceEngine.start(); GazeEngine.start(); AudioEngine.start(); },
+  stop()  { FaceEngine.stop();  GazeEngine.stop();  AudioEngine.stop();  },
+};
+  </script>
+
+  <script>
+    // === BRAIN MODULE === //
+// === ADAPTIQ BRAIN MODULE === //
+
+// =========================================================
+// 1. PROFILE CONFIG
+// =========================================================
+const ProfileConfig = (() => {
+  const SPECIAL_NEEDS_TUTOR = {
+    id: 'special_needs',
+    name: 'Special Needs Tutor',
+    threshold_z: 1.8,
+    ces_alert_level: 65,
+    cooldown_seconds: 20,
+    monitored_signals: ['gds', 'osr', 'hpd', 'et', 'bra'],
+    interventions: {
+      GAZE_ERRATIC:       { action: 'focus_object',   message: "Let's take a breath and look at this shape.",  duration: 3000  },
+      GAZE_LOST:          { action: 'focus_object',   message: 'Look at the screen — find the shape!',          duration: 3000  },
+      ATTENTION_DROP:     { action: 'content_swap',   message: "Let's try something different!"                               },
+      STRESS_DETECTED:    { action: 'break_timer',    message: 'Time for a quick break!',                       duration: 30000 },
+      FOCUS_DRIFT:        { action: 'focus_object',   message: 'Can you find the shape?',                       duration: 3000  },
+      PROLONGED_SILENCE:  { action: 'claude_response',message: "You've been quiet — need help?"                               },
+    },
+  };
+
+  const INTERVIEW_COACH = {
+    id: 'interview_coach',
+    name: 'Interview Coach',
+    threshold_z: 2.0,
+    ces_alert_level: 63,
+    cooldown_seconds: 15,
+    monitored_signals: ['gds', 'osr', 'hpd', 'ves', 'pvs', 'sr', 'silr'],
+    scored_metrics: true,
+    interventions: {
+      GAZE_ERRATIC:        { action: 'banner',         message: 'Maintain steady eye contact with the camera.',              color: '#f59e0b', severity: 'medium' },
+      GAZE_LOST:           { action: 'banner',         message: 'Look at the camera — your interviewer is here.',           color: '#ef4444', severity: 'high'   },
+      STRESS_DETECTED:     { action: 'banner',         message: "Take a breath. Slow down. You've got this.",               color: '#f59e0b', severity: 'medium' },
+      SPEECH_PANIC:        { action: 'banner',         message: "You're speaking very fast. Pause and collect your thoughts.", color: '#ef4444', severity: 'high' },
+      PROLONGED_SILENCE:   { action: 'claude_response',message: "Looks like you're thinking — want a hint?"                                                       },
+      OVERCONFIDENT_PACE:  { action: 'banner',         message: 'Great energy! Try varying your pace for emphasis.',        color: '#3b82f6', severity: 'low'    },
+    },
+  };
+
+  const LANGUAGE_TEACHER = {
+    id: 'language_teacher',
+    name: 'Language Teacher',
+    threshold_z: 2.0,
+    ces_alert_level: 63,
+    cooldown_seconds: 15,
+    monitored_signals: ['et', 'pvs', 'silr', 'sr'],
+    interventions: {
+      STRESS_DETECTED:   { action: 'content_swap',   message: "Let's simplify this. Try an easier sentence."     },
+      FOCUS_DRIFT:       { action: 'claude_response',message: 'Let me rephrase that differently.'                },
+      PROLONGED_SILENCE: { action: 'claude_response',message: 'Take your time. Want me to repeat?'               },
+      SPEECH_PANIC:      { action: 'banner',         message: 'Slow down — pronunciation is more important than speed.', color: '#f59e0b', severity: 'medium' },
+    },
+  };
+
+  const _byId = {
+    special_needs:    SPECIAL_NEEDS_TUTOR,
+    interview_coach:  INTERVIEW_COACH,
+    language_teacher: LANGUAGE_TEACHER,
+    adhd:    SPECIAL_NEEDS_TUTOR,
+    anxiety: SPECIAL_NEEDS_TUTOR,
+    asd:     SPECIAL_NEEDS_TUTOR,
+  };
+
+  return {
+    SPECIAL_NEEDS_TUTOR,
+    INTERVIEW_COACH,
+    LANGUAGE_TEACHER,
+    getById(id) { return _byId[id] || null; },
+  };
+})();
+
+window.ProfileConfig = ProfileConfig;
+
+// =========================================================
+// 2. ANOMALY DETECTOR
+// =========================================================
+const AnomalyDetector = (() => {
+  const SIGNAL_NAMES = ['gds', 'osr', 'hpd', 'et', 'ves', 'pvs', 'silr', 'sr', 'bra'];
+  const CES_W = { gds: 0.20, osr: 0.20, hpd: 0.15, et: 0.10, ves: 0.10, pvs: 0.10, sr: 0.10, bra: 0.05 };
+
+  const FLAG_DURATION = {
+    GAZE_ERRATIC:       3000,
+    GAZE_LOST:          5000,
+    ATTENTION_DROP:     10000,
+    STRESS_DETECTED:    5000,
+    FOCUS_DRIFT:        8000,
+    SPEECH_PANIC:       3000,
+    PROLONGED_SILENCE:  5000,
+    OVERCONFIDENT_PACE: 10000,
+  };
+
+  const DEMO_FLAG_DURATION = {
+    GAZE_ERRATIC:       1000,
+    GAZE_LOST:          1500,
+    ATTENTION_DROP:     2000,
+    STRESS_DETECTED:    1500,
+    FOCUS_DRIFT:        2000,
+    SPEECH_PANIC:       1000,
+    PROLONGED_SILENCE:  3000,
+    OVERCONFIDENT_PACE: 2000,
+  };
+
+  const FLAG_SEVERITY = {
+    GAZE_ERRATIC:       'medium',
+    GAZE_LOST:          'high',
+    ATTENTION_DROP:     'high',
+    STRESS_DETECTED:    'medium',
+    FOCUS_DRIFT:        'low',
+    SPEECH_PANIC:       'high',
+    PROLONGED_SILENCE:  'medium',
+    OVERCONFIDENT_PACE: 'low',
+  };
+
+  let buffers = {};
+  let latestSignals = {};
+  let isCalibrating = true;
+  let calibrationStartTime = null;
+  let activeProfile = null;
+  let detectionInterval = null;
+  let flagOnsetTimes = {};
+
+  function clamp(v, lo = 0, hi = 100) { return Math.max(lo, Math.min(hi, v)); }
+
+  function makeBuffer() {
+    return (typeof SignalBuffer !== 'undefined') ? new SignalBuffer(60) : null;
+  }
+
+  function resetState() {
+    buffers = {};
+    SIGNAL_NAMES.forEach(n => { buffers[n] = makeBuffer(); });
+    latestSignals = {};
+    flagOnsetTimes = {};
+    isCalibrating = true;
+    calibrationStartTime = Date.now();
+  }
+
+  function pushToBuffer(name, value) {
+    if (!buffers[name]) buffers[name] = makeBuffer();
+    if (buffers[name]) buffers[name].push(value);
+  }
+
+  function getZ(name) {
+    const buf = buffers[name];
+    if (!buf) return 0;
+    return buf.zScore(latestSignals[name] || 0);
+  }
+
+  function getVal(name) { return latestSignals[name] || 0; }
+
+  function computeCES(s) {
+    const raw = Object.keys(CES_W).reduce((sum, k) => sum + (s[k] || 0) * CES_W[k], 0);
+    return clamp(100 - raw);
+  }
+
+  function checkCondition(flagType) {
+    if (!activeProfile) return false;
+    const z = activeProfile.threshold_z;
+    switch (flagType) {
+      case 'GAZE_ERRATIC':       return getZ('gds') > z;
+      case 'GAZE_LOST':          return getVal('osr') > 80;
+      case 'ATTENTION_DROP':     return computeCES(latestSignals) < activeProfile.ces_alert_level;
+      case 'STRESS_DETECTED':    return getZ('et') > z && (getZ('ves') > z || getZ('pvs') > z);
+      case 'FOCUS_DRIFT':        return getZ('gds') > z * 0.8 && getZ('hpd') > z * 0.8;
+      case 'SPEECH_PANIC':       return getVal('sr') > 70 && getZ('ves') > z;
+      case 'PROLONGED_SILENCE':  return getVal('silr') > 60;
+      case 'OVERCONFIDENT_PACE': return getVal('sr') > 60 && getVal('pvs') < 10;
+      default:                   return false;
+    }
+  }
+
+  function detectionCycle() {
+    if (!activeProfile) return;
+    const now = Date.now();
+    const elapsed = now - calibrationStartTime;
+
+    if (isCalibrating) {
+      const calibWindow = window.DEMO_MODE ? 5000 : 8000;
+      if (elapsed < calibWindow) { Bus.emit('signal:update', { ...latestSignals, ces: 100 }); return; }
+      isCalibrating = false;
+      Bus.emit('calibration:complete', { type: 'baseline' });
+    }
+
+    const ces = computeCES(latestSignals);
+    Bus.emit('signal:update', { ...latestSignals, ces });
+
+    Object.keys(FLAG_DURATION).forEach(flagType => {
+      if (!activeProfile.interventions[flagType]) return;
+      const triggered = checkCondition(flagType);
+      if (triggered) {
+        if (!flagOnsetTimes[flagType]) {
+          flagOnsetTimes[flagType] = now;
+        } else if (now - flagOnsetTimes[flagType] >= (window.DEMO_MODE ? DEMO_FLAG_DURATION : FLAG_DURATION)[flagType]) {
+          delete flagOnsetTimes[flagType];
+          Bus.emit('flag:fired', {
+            type: flagType,
+            severity: FLAG_SEVERITY[flagType],
+            timestamp: now,
+            message: activeProfile.interventions[flagType]?.message || flagType,
+          });
+        }
+      } else {
+        delete flagOnsetTimes[flagType];
+      }
+    });
+  }
+
+  function init(profile) { activeProfile = profile; resetState(); }
+  function start() {
+    if (detectionInterval) clearInterval(detectionInterval);
+    detectionInterval = setInterval(() => { try { detectionCycle(); } catch (e) { console.error('[AnomalyDetector]', e); } }, 100);
+  }
+  function stop() { if (detectionInterval) { clearInterval(detectionInterval); detectionInterval = null; } }
+  function reset() { stop(); resetState(); }
+  function getCES() { return computeCES(latestSignals); }
+
+  Bus.on('signal:face', ({ et, hpd, bra }) => {
+    latestSignals.et = et || 0; latestSignals.hpd = hpd || 0; latestSignals.bra = bra || 0;
+    pushToBuffer('et', latestSignals.et); pushToBuffer('hpd', latestSignals.hpd); pushToBuffer('bra', latestSignals.bra);
+  });
+  Bus.on('signal:gaze', ({ gds, osr }) => {
+    latestSignals.gds = gds || 0; latestSignals.osr = osr || 0;
+    pushToBuffer('gds', latestSignals.gds); pushToBuffer('osr', latestSignals.osr);
+  });
+  Bus.on('signal:audio', ({ ves, pvs, silr, sr }) => {
+    latestSignals.ves = ves || 0; latestSignals.pvs = pvs || 0; latestSignals.silr = silr || 0; latestSignals.sr = sr || 0;
+    pushToBuffer('ves', latestSignals.ves); pushToBuffer('pvs', latestSignals.pvs);
+    pushToBuffer('silr', latestSignals.silr); pushToBuffer('sr', latestSignals.sr);
+  });
+  Bus.on('profile:selected', ({ id, config }) => { init(config); });
+
+  return { init, start, stop, reset, get isCalibrating() { return isCalibrating; }, getCES };
+})();
+
+window.AnomalyDetector = AnomalyDetector;
+
+// =========================================================
+// 3. INTERVENTION DISPATCHER
+// =========================================================
+const InterventionDispatcher = (() => {
+  let lastInterventionTime = 0;
+  let interventionLog = [];
+  let activeProfile = null;
+
+  function init(profile) { activeProfile = profile; interventionLog = []; lastInterventionTime = 0; }
+
+  Bus.on('profile:selected', ({ id, config }) => { init(config); });
+
+  Bus.on('flag:fired', (flag) => {
+    if (!activeProfile) return;
+    const now = Date.now();
+    if (now - lastInterventionTime < (window.DEMO_MODE ? 5 : activeProfile.cooldown_seconds) * 1000) return;
+    const intervention = activeProfile.interventions[flag.type];
+    if (!intervention) return;
+    interventionLog.push({ flag, intervention, timestamp: now });
+    lastInterventionTime = now;
+    if (intervention.action === 'claude_response') {
+      window.ClaudeClient?.generate({
+        profile: activeProfile,
+        signals: { ces: window.AnomalyDetector ? AnomalyDetector.getCES() : 0 },
+        transcript: window.AudioEngine ? AudioEngine.getTranscript() : '',
+        flagType: flag.type,
+        message: intervention.message,
+      });
+    } else {
+      Bus.emit('intervention:trigger', { ...intervention, profile: activeProfile.id });
+    }
+  });
+
+  return { init, getLog() { return [...interventionLog]; }, reset() { interventionLog = []; lastInterventionTime = 0; } };
+})();
+
+window.InterventionDispatcher = InterventionDispatcher;
+
+// =========================================================
+// 4. CLAUDE CLIENT
+// =========================================================
+const ClaudeClient = (() => {
+  let apiKey = null;
+
+  const SYSTEM_PROMPTS = {
+    special_needs:    'You are a patient, encouraging tutor for a student with special needs. Use simple words. Be warm and reassuring. Keep responses under 2 sentences.',
+    interview_coach:  'You are a professional interview coach. Give direct, actionable feedback. Reference specific behaviors (eye contact, pacing, filler words). Keep responses under 3 sentences.',
+    language_teacher: 'You are a friendly language teacher. Simplify your vocabulary. If the student is struggling, rephrase or offer an easier alternative. Keep responses under 2 sentences.',
+  };
+
+  function setApiKey(key) { apiKey = key; }
+
+  async function generate(context) {
+    const { profile, signals, transcript, flagType, message } = context;
+    const profileId = profile?.id || 'interview_coach';
+    const systemPrompt = SYSTEM_PROMPTS[profileId] || SYSTEM_PROMPTS.interview_coach;
+    const userMsg = `Flag triggered: ${flagType}. CES=${(signals.ces || 0).toFixed(0)}. Transcript: "${(transcript || '').slice(-200)}". Respond briefly and helpfully.`;
+
+    if (!apiKey) { Bus.emit('intervention:trigger', { action: 'claude_response', message, done: true }); return; }
+
+    let settled = false;
+    let receivedFirstChunk = false;
+    const fallback = setTimeout(() => {
+      if (!settled && !receivedFirstChunk) {
+        settled = true;
+        console.warn('[ClaudeClient] No response after 15s, using fallback');
+        Bus.emit('intervention:trigger', { action: 'claude_response', message, done: true });
+      }
+    }, 15000);
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 150,
+          stream: true,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userMsg }],
+        }),
+      });
+
+      if (!resp.ok) {
+        clearTimeout(fallback);
+        if (!settled) { settled = true; Bus.emit('intervention:trigger', { action: 'claude_response', message, done: true }); }
+        return;
+      }
+
+      clearTimeout(fallback); settled = true;
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (raw === '[DONE]') continue;
+          try {
+            const evt = JSON.parse(raw);
+            if (evt.type === 'content_block_delta' && evt.delta?.text) {
+              receivedFirstChunk = true;
+              Bus.emit('intervention:trigger', { action: 'claude_response', chunk: evt.delta.text, done: false });
+            }
+          } catch { /* skip malformed SSE */ }
+        }
+      }
+      Bus.emit('intervention:trigger', { action: 'claude_response', chunk: '', done: true });
+    } catch (err) {
+      console.error('[ClaudeClient] generate error:', err);
+      if (!settled) { settled = true; clearTimeout(fallback); Bus.emit('intervention:trigger', { action: 'claude_response', message, done: true }); }
+    }
+  }
+
+  async function generateDebrief(sessionData) {
+    if (!apiKey) return null;
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 400,
+          system: 'You are a professional interview coach writing a session debrief. Be constructive, specific, and encouraging.',
+          messages: [{ role: 'user', content: `Write a professional debrief for this interview practice session.\n\nSession data:\n${JSON.stringify(sessionData, null, 2)}\n\nInclude: overall performance summary, 2 strengths, 2 areas to improve, and 2 actionable tips.` }],
+        }),
+      });
+      if (!resp.ok) return null;
+      const json = await resp.json();
+      return json.content?.[0]?.text || null;
+    } catch (err) { console.error('[ClaudeClient] debrief error:', err); return null; }
+  }
+
+  return { setApiKey, generate, generateDebrief };
+})();
+
+window.ClaudeClient = ClaudeClient;
+
+// =========================================================
+// 5. INTERVIEW SCORECARD
+// =========================================================
+const InterviewScorecard = (() => {
+  const FILLER_RE = /\b(um|uh|like|you know|basically|actually|literally)\b/gi;
+  let totalFrames = 0, framesWithGoodEyeContact = 0;
+  let hpdValues = [], fillerCount = 0, wordCount = 0;
+  let latestPvs = 0, latestSilr = 0, latestSr = 0;
+  let scoreInterval = null, signalUpdateHandler = null, audioHandler = null;
+
+  function clamp(v) { return Math.max(0, Math.min(100, v)); }
+
+  function reset() {
+    totalFrames = 0; framesWithGoodEyeContact = 0; hpdValues = [];
+    fillerCount = 0; wordCount = 0; latestPvs = 0; latestSilr = 0; latestSr = 0;
+  }
+
+  function getScores() {
+    const eyeContact      = clamp(totalFrames > 0 ? (framesWithGoodEyeContact / totalFrames) * 100 : 0);
+    const avgHpd          = hpdValues.length > 0 ? hpdValues.reduce((a, b) => a + b, 0) / hpdValues.length : 0;
+    const headStability   = clamp(100 - avgHpd);
+    const vocalConfidence = clamp(100 - latestPvs * 0.3 - latestSilr * 0.7);
+    const fillerPenalty   = wordCount > 0 ? (fillerCount / wordCount) * 100 : 0;
+    const speechClarity   = clamp(100 - latestSr - fillerPenalty);
+    const overall         = clamp(eyeContact * 0.25 + headStability * 0.20 + vocalConfidence * 0.25 + speechClarity * 0.30);
+    let grade = 'F';
+    if (overall >= 85) grade = 'A'; else if (overall >= 70) grade = 'B';
+    else if (overall >= 55) grade = 'C'; else if (overall >= 40) grade = 'D';
+    return { eyeContact, headStability, vocalConfidence, speechClarity, overall, grade };
+  }
+
+  function init() {
+    reset();
+    if (signalUpdateHandler) Bus.off('signal:update', signalUpdateHandler);
+    if (audioHandler) Bus.off('signal:audio', audioHandler);
+
+    signalUpdateHandler = ({ osr, hpd }) => {
+      if (window.AnomalyDetector?.isCalibrating) return;
+      totalFrames++;
+      if ((osr || 0) < 30) framesWithGoodEyeContact++;
+      if (hpd !== undefined) { hpdValues.push(hpd); if (hpdValues.length > 300) hpdValues.shift(); }
+    };
+    audioHandler = ({ pvs, silr, sr, transcript }) => {
+      latestPvs = pvs || 0; latestSilr = silr || 0; latestSr = sr || 0;
+      if (transcript) {
+        fillerCount = (transcript.match(FILLER_RE) || []).length;
+        wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
+      }
+    };
+
+    Bus.on('signal:update', signalUpdateHandler);
+    Bus.on('signal:audio', audioHandler);
+    if (scoreInterval) clearInterval(scoreInterval);
+    scoreInterval = setInterval(() => { try { Bus.emit('scores:update', getScores()); } catch (e) { console.error('[InterviewScorecard]', e); } }, 2000);
+  }
+
+  Bus.on('profile:selected', ({ id, config }) => { if (config) return; init(); });
+
+  return { init, reset, getScores };
+})();
+
+window.InterviewScorecard = InterviewScorecard;
+
+// =========================================================
+// 6. SESSION MANAGER
+// =========================================================
+const SessionManager = (() => {
+  let sessionStartTime = null, lastSessionData = null;
+
+  function start() { sessionStartTime = Date.now(); lastSessionData = null; }
+
+  async function endSession() {
+    const duration = sessionStartTime ? Date.now() - sessionStartTime : 0;
+    lastSessionData = {
+      duration_ms:       duration,
+      duration_readable: `${Math.floor(duration / 60000)}m ${Math.floor((duration % 60000) / 1000)}s`,
+      ces_final:         window.AnomalyDetector ? AnomalyDetector.getCES() : 0,
+      total_flags:       window.InterventionDispatcher ? InterventionDispatcher.getLog().length : 0,
+      flag_log:          window.InterventionDispatcher ? InterventionDispatcher.getLog() : [],
+      scores:            window.InterviewScorecard ? InterviewScorecard.getScores() : null,
+      transcript:        (window.AudioEngine ? AudioEngine.getTranscript() : '').slice(-2000),
+      exported_at:       new Date().toISOString(),
+    };
+    Bus.emit('session:end', { summary: lastSessionData });
+    if (lastSessionData.scores && window.ClaudeClient) {
+      ClaudeClient.generateDebrief(lastSessionData).then(debrief => {
+        if (debrief) { lastSessionData.debrief = debrief; Bus.emit('session:debrief', { text: debrief }); }
+      });
+    }
+    return lastSessionData;
+  }
+
+  return { start, endSession, getSessionData() { return lastSessionData; } };
+})();
+
+window.SessionManager = SessionManager;
+
+// =========================================================
+// 7. BRAIN MANAGER
+// =========================================================
+window.BrainManager = {
+  init(profileId) {
+    const profile = ProfileConfig.getById(profileId);
+    if (!profile) { console.error('[BrainManager] Unknown profile:', profileId); return; }
+    Bus.emit('profile:selected', { id: profileId, config: profile });
+    AnomalyDetector.init(profile);
+    InterventionDispatcher.init(profile);
+    InterviewScorecard.init();
+    SessionManager.start();
+  },
+  start()      { AnomalyDetector.start(); },
+  stop()       { AnomalyDetector.stop(); },
+  endSession() { return SessionManager.endSession(); },
+};
+  </script>
+
+  <script>
+  // === QUESTION MANAGER === //
+  window.QuestionManager = (() => {
+    const QUESTIONS = [
+      { cat: 'Basic Information',        q: 'Tell me about yourself and your background.' },
+      { cat: 'Basic Information',        q: 'What are your greatest professional strengths?' },
+      { cat: 'Basic Information',        q: 'What do you consider to be your weaknesses?' },
+      { cat: 'Basic Information',        q: 'Where do you see yourself in five years?' },
+      { cat: 'Interest & Goals',         q: 'Why are you interested in this position?' },
+      { cat: 'Interest & Goals',         q: 'Why do you want to work for this company?' },
+      { cat: 'Interest & Goals',         q: 'What are your career goals?' },
+      { cat: 'About You',                q: 'What motivates you in your work?' },
+      { cat: 'About You',                q: 'How would your colleagues describe you?' },
+      { cat: 'About You',                q: 'What are your hobbies and interests outside of work?' },
+      { cat: 'Experience',               q: 'Tell me about your work experience.' },
+      { cat: 'Experience',               q: 'What have been your most significant accomplishments?' },
+      { cat: 'Experience',               q: 'Tell me about a time you worked on a challenging project.' },
+      { cat: 'Experience',               q: 'Describe a time you showed leadership.' },
+      { cat: 'Experience',               q: 'Tell me about a time you had to learn something quickly.' },
+      { cat: 'Experience',               q: 'Describe a time you resolved a conflict at work.' },
+      { cat: 'Challenges',               q: 'Tell me about a time you failed and what you learned.' },
+      { cat: 'Challenges',               q: 'How do you handle stress and pressure?' },
+      { cat: 'Challenges',               q: 'Describe a difficult decision you had to make.' },
+      { cat: 'Challenges',               q: 'How do you handle criticism?' },
+      { cat: 'Strengths & Development',  q: 'What skills are you currently developing?' },
+      { cat: 'Strengths & Development',  q: 'What makes you unique compared to other candidates?' },
+      { cat: 'Strengths & Development',  q: 'How do you stay current in your field?' },
+      { cat: 'Closing',                  q: 'What are your salary expectations?' },
+      { cat: 'Closing',                  q: 'Why should we hire you?' },
+      { cat: 'Closing',                  q: 'Do you have any questions for us?' },
+    ];
+
+    let current = 0;
+
+    function render() {
+      const q = QUESTIONS[current];
+      const textEl  = document.getElementById('question-text');
+      const catEl   = document.getElementById('question-category');
+      const progEl  = document.getElementById('question-progress');
+      const prevBtn = document.getElementById('btn-prev-q');
+      const nextBtn = document.getElementById('btn-next-q');
+      if (!textEl) return;
+
+      textEl.textContent  = q.q;
+      catEl.textContent   = q.cat;
+      progEl.textContent  = `${current + 1} / ${QUESTIONS.length}`;
+      prevBtn.disabled    = current === 0;
+      nextBtn.disabled    = current === QUESTIONS.length - 1;
+      nextBtn.textContent = current === QUESTIONS.length - 1 ? 'Done' : 'Next →';
+    }
+
+    function next() { if (current < QUESTIONS.length - 1) { current++; render(); } }
+    function prev() { if (current > 0) { current--; render(); } }
+    function reset() { current = 0; render(); }
+
+    function init() {
+      const prevBtn = document.getElementById('btn-prev-q');
+      const nextBtn = document.getElementById('btn-next-q');
+      if (!prevBtn || !nextBtn) return;
+
+      prevBtn.addEventListener('click', prev);
+      nextBtn.addEventListener('click', next);
+
+      document.addEventListener('keydown', (e) => {
+        const card = document.getElementById('question-card');
+        if (!card || !document.getElementById('screen-dashboard')?.classList.contains('active')) return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.key === 'ArrowRight') next();
+        if (e.key === 'ArrowLeft')  prev();
+      });
+
+      render();
+    }
+
+    if (typeof Bus !== 'undefined') {
+      Bus.on('calibration:complete', ({ type }) => {
+        if (type === 'gaze') reset();
+      });
+    }
+
+    return { init, next, prev, reset, total: QUESTIONS.length, get(i) { return QUESTIONS[i]; } };
+  })();
+  </script>
+
+  <script src="ui.js"></script>
+
+  <script>
+    // === APP INIT === //
+    (async () => {
+      // Boot UI
+      if (window.AdaptIQ_UI) window.AdaptIQ_UI.init();
+      if (window.QuestionManager) window.QuestionManager.init();
+
+      window.DEMO_MODE = false;
+      document.getElementById('demo-mode-toggle')?.addEventListener('change', (e) => {
+        window.DEMO_MODE = e.target.checked;
+      });
+
+      // Restore API key from localStorage
+      const storedKey = localStorage.getItem('adaptiq_api_key') || '';
+      const apiKeyEl  = document.getElementById('api-key-input');
+      if (apiKeyEl && storedKey) apiKeyEl.value = storedKey;
+      if (storedKey && window.ClaudeClient) ClaudeClient.setApiKey(storedKey);
+
+      // Restore name
+      const storedName = localStorage.getItem('adaptiq_name') || 'Candidate';
+      const nameTagEl  = document.getElementById('cam-name-tag');
+      const navNameEl  = document.getElementById('nav-name-label');
+      if (nameTagEl) nameTagEl.textContent = storedName;
+      if (navNameEl) navNameEl.textContent = storedName.split(' ')[0].toUpperCase() + ' ▾';
+
+      const videoEl = document.getElementById('video-feed');
+      let sensorsInitialized = false;
+      let mediaStream = null;
+
+      Bus.on('profile:selected', async ({ id, config }) => {
+        if (config) return; // BrainManager re-emission
+
+        const apiKey = localStorage.getItem('adaptiq_api_key') || '';
+        if (apiKey && window.ClaudeClient) ClaudeClient.setApiKey(apiKey);
+
+        if (window.BrainManager) BrainManager.init(id);
+        if (window.AudioEngine) AudioEngine.reset();
+
+        if (window.SensorManager && !sensorsInitialized) {
+          sensorsInitialized = true;
+          try {
+            if (!mediaStream) {
+              mediaStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 1280, height: 720 },
+                audio: true
+              });
+              if (videoEl) {
+                videoEl.srcObject = mediaStream;
+                document.getElementById('cam-placeholder').style.display = 'none';
+              }
+            }
+
+            await SensorManager.init(videoEl, mediaStream);
+            SensorManager.start();
+
+            if (window.BrainManager) BrainManager.start();
+
+            SensorManager.startCalibration().catch(() => {});
+          } catch (err) {
+            console.warn('[AppInit] Permission denied or sensor init failed:', err);
+            const errMsg = err.name === 'NotAllowedError'
+              ? 'Camera/microphone access denied. AdaptIQ needs these to function.'
+              : 'Sensor initialization failed. Please refresh and try again.';
+            if (window.AdaptIQ_UI) {
+              window.AdaptIQ_UI.updateSystemStatus('error', errMsg);
+            }
+            Bus.emit('calibration:complete', { type: 'gaze' });
+          }
+        }
+      });
+
+      document.getElementById('btn-end-session')?.addEventListener('click', () => {
+        if (window.SensorManager) SensorManager.stop();
+        if (window.BrainManager) {
+          BrainManager.stop();
+          BrainManager.endSession();
+        }
+        if (window.InterventionDispatcher) InterventionDispatcher.reset();
+      });
+
+      document.getElementById('btn-new-session')?.addEventListener('click', () => {
+        window.location.href = 'index.html';
+      });
+
+      // ── Wire live signal chips to Bus events ──
+      function signalClass(val, threshGood, threshWarn) {
+        if (val <= threshGood)  return 'signal-chip green';
+        if (val <= threshWarn) return 'signal-chip yellow';
+        return 'signal-chip red';
+      }
+
+      Bus.on('signal:update', ({ gds, osr, ces }) => {
+        const eye   = document.getElementById('sig-eye');
+        const calm  = document.getElementById('sig-calm');
+        if (eye)  { eye.textContent  = `Eye Contact: ${osr !== undefined ? (100 - Math.round(osr)) + '%' : '—'}`; eye.className  = signalClass(osr ?? 0, 25, 55); }
+        if (calm) { calm.textContent = `CES: ${ces !== undefined ? Math.round(ces) : '—'}`; calm.className = signalClass(100 - (ces ?? 100), 25, 45); }
+      });
+
+      Bus.on('signal:audio', ({ ves, silr }) => {
+        const voice = document.getElementById('sig-voice');
+        if (!voice) return;
+        const score = Math.max(ves ?? 0, silr ?? 0);
+        voice.textContent = `Voice: ${silr !== undefined ? (100 - Math.round(silr)) + '%' : '—'}`;
+        voice.className = signalClass(score, 30, 60);
+      });
+
+      // ── Auto-start session from localStorage profile ──
+      const profileId = localStorage.getItem('adaptiq_profile') || 'adhd';
+      document.getElementById('topbar-profile-label').textContent = profileId.toUpperCase();
+
+      // Auto-click the matching hidden profile card to trigger the full ui.js init flow
+      // (showScreen('dashboard') + startSession() both run inside initProfileScreen's click handler)
+      const hiddenCard = document.querySelector(`.profile-card[data-id="${profileId}"]`);
+      if (hiddenCard) {
+        hiddenCard.click();
+      } else {
+        // Fallback: emit directly if card missing
+        Bus.emit('profile:selected', { id: profileId });
+      }
+    })();
+  </script>
+
+  <script src="js/bg-canvas.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initCanvas(document.getElementById('bg-canvas'));
+    });
+  </script>
+</body>
+</html>
