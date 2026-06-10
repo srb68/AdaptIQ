@@ -58,9 +58,21 @@ window.AdaptIQ_UI = (() => {
   // PROFILE SELECTION SCREEN
   // ============================================================
   function initProfileScreen() {
+    const ctaText = document.getElementById('lp-cta-text');
+    const ctaBtn  = document.getElementById('lp-cta-btn');
+
     document.querySelectorAll('.profile-card').forEach(card => {
       card.addEventListener('click', () => {
         const id = card.dataset.id;
+
+        // Visual selection state
+        document.querySelectorAll('.profile-card').forEach(c => c.classList.remove('profile-selected'));
+        card.classList.add('profile-selected');
+        if (ctaText) {
+          const name = card.querySelector('h3')?.textContent || id.toUpperCase();
+          ctaText.textContent = `Start as ${name}`;
+        }
+
         state.profile = id;
         document.getElementById('topbar-profile-label').textContent = id.toUpperCase();
         Bus.emit('profile:selected', { id });
@@ -69,6 +81,14 @@ window.AdaptIQ_UI = (() => {
         startSession();
       });
     });
+
+    // CTA button also triggers last-selected profile (if any)
+    if (ctaBtn) {
+      ctaBtn.addEventListener('click', () => {
+        const selected = document.querySelector('.profile-card.profile-selected');
+        if (selected) selected.click();
+      });
+    }
   }
 
   // ============================================================

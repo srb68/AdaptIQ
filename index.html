@@ -10,8 +10,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/meyda/dist/web/meyda.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -41,7 +39,7 @@
       --border:        rgba(255,255,255,0.08);
       --border-bright: rgba(255,255,255,0.12);
 
-      --font: 'Space Grotesk', -apple-system, sans-serif;
+      --font: -apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, sans-serif;
 
       /* ── Backward-compat aliases ── */
       --bg-deep:       #111111;
@@ -56,8 +54,8 @@
       --purple:        #bf5af2;
       --green-dim:     rgba(48,209,88,0.1);
       --red-dim:       rgba(255,69,58,0.12);
-      --font-display:  'Space Grotesk', -apple-system, sans-serif;
-      --font-mono:     'Space Mono', monospace;
+      --font-display:  -apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, sans-serif;
+      --font-mono:     ui-monospace, 'SF Mono', Menlo, monospace;
       --radius-sm:     6px;
       --radius:        10px;
       --radius-lg:     16px;
@@ -138,227 +136,386 @@
     }
 
     /* =============================================
-       SCREEN 1 — LANDING (spotlight hero)
+       SCREEN 1 — LANDING (2-column design)
     ============================================= */
     #screen-profile {
       position: fixed; inset: 0;
-      background: #000;
+      background: #080808;
       overflow: hidden;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
     }
 
-    /* Animated spotlight blobs */
-    .spotlight-overlay {
+    /* ── Animated background layer ── */
+    #screen-profile .bg {
       position: absolute; inset: 0;
       pointer-events: none;
       z-index: 0;
       overflow: hidden;
     }
-    .spotlight-blob {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(90px);
-      opacity: 0.18;
-    }
-    .spotlight-blob--left {
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, #ffffff, transparent 70%);
-      top: 50%; left: 20%;
-      transform: translate(-50%, -50%);
-      animation: blobLeft 12s ease-in-out infinite alternate;
-    }
-    .spotlight-blob--mid {
-      width: 480px; height: 480px;
-      background: radial-gradient(circle, #c0c0c0, transparent 70%);
-      top: 25%; left: 55%;
-      transform: translate(-50%, -50%);
-      animation: blobMid 15s ease-in-out 3s infinite alternate;
-    }
-    .spotlight-blob--right {
-      width: 520px; height: 520px;
-      background: radial-gradient(circle, #ffffff, transparent 70%);
-      top: 65%; left: 72%;
-      transform: translate(-50%, -50%);
-      animation: blobRight 18s ease-in-out 5s infinite alternate;
-    }
-    @keyframes blobLeft {
-      0%   { transform: translate(-50%, -50%) rotate(0deg); }
-      33%  { transform: translate(-30%, -70%) rotate(15deg); }
-      66%  { transform: translate(-70%, -30%) rotate(-15deg); }
-      100% { transform: translate(-50%, -50%) rotate(0deg); }
-    }
-    @keyframes blobMid {
-      0%   { transform: translate(-50%, -50%) rotate(-20deg); }
-      33%  { transform: translate(-30%, -20%) rotate(0deg); }
-      66%  { transform: translate(-70%, -40%) rotate(20deg); }
-      100% { transform: translate(-50%, -50%) rotate(-20deg); }
-    }
-    @keyframes blobRight {
-      0%   { transform: translate(-50%, -50%) rotate(10deg); }
-      33%  { transform: translate(-80%, -70%) rotate(-10deg); }
-      66%  { transform: translate(-40%, -30%) rotate(25deg); }
-      100% { transform: translate(-50%, -50%) rotate(10deg); }
+
+    /* Noise texture overlay */
+    #screen-profile .bg::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      background-size: 180px 180px;
+      opacity: 0.035;
     }
 
-    /* Landing content */
-    .landing-content {
+    /* Drifting grid */
+    #screen-profile .bg-grid {
+      position: absolute; inset: -100px;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridDrift 40s linear infinite;
+    }
+    @keyframes gridDrift {
+      from { transform: translate(0, 0); }
+      to   { transform: translate(60px, 60px); }
+    }
+
+    /* Orbs */
+    #screen-profile .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+    #screen-profile .orb-1 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+      top: -10%; left: -10%;
+      animation: orbFloat1 18s ease-in-out infinite alternate;
+    }
+    #screen-profile .orb-2 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+      bottom: -5%; right: 45%;
+      animation: orbFloat2 22s ease-in-out infinite alternate;
+    }
+    #screen-profile .orb-3 {
+      width: 360px; height: 360px;
+      background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+      top: 30%; right: -5%;
+      animation: orbFloat3 26s ease-in-out infinite alternate;
+    }
+    #screen-profile .orb-4 {
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%);
+      bottom: 10%; right: 10%;
+      animation: orbFloat1 20s ease-in-out 4s infinite alternate;
+    }
+    @keyframes orbFloat1 {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(60px, 40px) scale(1.12); }
+    }
+    @keyframes orbFloat2 {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(-50px, -60px) scale(1.08); }
+    }
+    @keyframes orbFloat3 {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(-40px, 50px) scale(1.1); }
+    }
+
+    /* Scan beams */
+    #screen-profile .scan-h {
+      position: absolute; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+      animation: scanH 14s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes scanH {
+      from { top: -2px; }
+      to   { top: 100%; }
+    }
+    #screen-profile .scan-v {
+      position: absolute; top: 0; bottom: 0;
+      width: 1px;
+      background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+      animation: scanV 20s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes scanV {
+      from { left: -2px; }
+      to   { left: 100%; }
+    }
+
+    /* Rising particles */
+    #screen-profile .particle {
+      position: absolute;
+      bottom: -10px;
+      width: 2px; height: 2px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      animation: rise linear infinite;
+      pointer-events: none;
+    }
+    @keyframes rise {
+      0%   { transform: translateY(0) translateX(0); opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 0.3; }
+      100% { transform: translateY(-100vh) translateX(20px); opacity: 0; }
+    }
+
+    /* ── Left panel ── */
+    .lp-left {
       position: relative;
       z-index: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      text-align: center;
-      width: 100%;
-      max-width: 520px;
-      padding: 2rem;
-      animation: landingFadeUp 0.8s 0.2s both cubic-bezier(0.4,0,0.2,1);
-    }
-    @keyframes landingFadeUp {
-      from { opacity: 0; transform: translateY(32px); }
-      to   { opacity: 1; transform: translateY(0); }
+      justify-content: center;
+      padding: 72px 64px;
+      border-right: 1px solid rgba(255,255,255,0.06);
     }
 
-    /* Logo row */
-    .landing-logo {
-      display: inline-flex;
+    .lp-logo-row {
+      display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
+      gap: 10px;
+      margin-bottom: 48px;
     }
-    .landing-logo-mark {
-      width: 42px; height: 42px;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: 10px;
+    .lp-logo-mark {
+      width: 32px; height: 32px;
+      background: #fff;
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 1rem; color: #fff;
+      font-size: 12px; font-weight: 700; color: #000;
       flex-shrink: 0;
     }
-    .landing-wordmark {
-      font-size: 2.25rem; font-weight: 800;
-      color: #ffffff;
-      letter-spacing: -0.02em;
-    }
-    .landing-subtitle {
-      color: rgba(255,255,255,0.5);
-      font-size: 1rem;
-      margin-bottom: 2rem;
+    .lp-logo-name {
+      font-size: 15px; font-weight: 600;
+      color: rgba(255,255,255,0.85);
+      letter-spacing: -0.01em;
     }
 
-    /* Config inputs */
-    .landing-config {
-      display: flex;
-      flex-direction: column;
+    .lp-title {
+      font-size: clamp(2.2rem, 3.5vw, 3rem);
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.15;
+      letter-spacing: -0.025em;
+      margin-bottom: 16px;
+    }
+    .lp-subtitle {
+      font-size: 15px;
+      color: rgba(255,255,255,0.38);
+      line-height: 1.65;
+      max-width: 340px;
+      margin-bottom: 40px;
+    }
+
+    .lp-cta {
+      position: relative;
+      display: inline-flex;
       align-items: center;
-      gap: 12px;
-      width: 100%;
-      margin-bottom: 1.5rem;
-    }
-    .landing-api-input {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #f5f5f7;
-      padding: 12px 18px;
-      border-radius: 10px;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 999px;
+      background: #fff;
+      color: #000;
       font-size: 14px;
-      width: 100%;
-      outline: none;
-      font-family: inherit;
-      letter-spacing: 0.02em;
-      transition: border-color 180ms;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      overflow: hidden;
+      width: fit-content;
+      transition: opacity 0.2s, transform 0.15s;
+      letter-spacing: -0.01em;
     }
-    .landing-api-input:focus { border-color: rgba(255,255,255,0.25); }
-    .landing-api-input::placeholder { color: rgba(255,255,255,0.25); }
+    .lp-cta:hover { opacity: 0.92; transform: translateY(-1px); }
+    .lp-cta:active { transform: translateY(0); }
+    .lp-cta::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      animation: shimmerCta 2.8s ease-in-out infinite;
+    }
+    @keyframes shimmerCta {
+      0%   { left: -100%; }
+      60%  { left: 140%; }
+      100% { left: 140%; }
+    }
+    .lp-cta-arrow {
+      font-size: 16px;
+      transition: transform 0.15s;
+    }
+    .lp-cta:hover .lp-cta-arrow { transform: translateX(3px); }
 
-    /* Profile cards */
-    .landing-profiles {
+    /* ── Right panel ── */
+    .lp-right {
+      position: relative;
+      z-index: 1;
       display: flex;
       flex-direction: column;
+      justify-content: center;
+      padding: 72px 56px;
       gap: 12px;
-      width: 100%;
     }
+
+    .lp-choose-label {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      margin-bottom: 4px;
+    }
+
+    /* ── Profile cards ── */
     .profile-card {
       display: flex;
       align-items: center;
-      gap: 1.25rem;
-      padding: 1.1rem 1.25rem;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
+      gap: 14px;
+      padding: 16px 18px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
       border-radius: 14px;
       cursor: pointer;
-      text-align: left;
-      width: 100%;
-      backdrop-filter: blur(8px);
-      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+      transition: background 0.18s, border-color 0.18s, transform 0.12s;
       position: relative;
       overflow: hidden;
     }
     .profile-card:hover {
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(255,255,255,0.18);
-      transform: scale(1.02);
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.14);
+      transform: translateX(4px);
     }
-    .profile-card:active { transform: scale(0.98); }
+    .profile-card:active { transform: translateX(2px) scale(0.99); }
+    .profile-card.profile-selected {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.22);
+    }
 
     .profile-card-icon {
-      font-size: 1.4rem;
-      width: 44px; height: 44px;
+      font-size: 1.25rem;
+      width: 40px; height: 40px;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
       border-radius: 10px;
       flex-shrink: 0;
-      filter: grayscale(1);
+      color: rgba(255,255,255,0.55);
     }
-    .profile-card-body { display: flex; flex-direction: column; gap: 2px; }
-    .profile-card-tag {
-      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
-      color: rgba(255,255,255,0.35);
-      font-weight: 600;
-    }
-    .profile-card h3 {
-      font-size: 1.05rem; font-weight: 700;
+    .profile-card.profile-selected .profile-card-icon {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.18);
       color: #fff;
     }
+    .profile-card-body { display: flex; flex-direction: column; gap: 1px; flex: 1; }
+    .profile-card-tag {
+      font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: rgba(255,255,255,0.28);
+      font-weight: 500;
+    }
+    .profile-card h3 {
+      font-size: 14px; font-weight: 600;
+      color: rgba(255,255,255,0.85);
+    }
     .profile-card p {
-      font-size: 0.82rem;
-      color: rgba(255,255,255,0.4);
+      font-size: 11px;
+      color: rgba(255,255,255,0.32);
     }
 
-    .landing-footnote {
-      color: rgba(255,255,255,0.2);
-      font-size: 0.72rem;
-      margin-top: 1.75rem;
-      max-width: 380px;
+    /* Dim last card (General) slightly */
+    .profile-card[data-id="general"] {
+      opacity: 0.7;
+    }
+    .profile-card[data-id="general"]:hover,
+    .profile-card[data-id="general"].profile-selected {
+      opacity: 1;
     }
 
-    /* Force B&W on the demo switch inside the landing screen */
-    #screen-profile .demo-switch-row {
-      background: rgba(255,255,255,0.04);
-      border-color: rgba(255,255,255,0.12);
+    /* Demo chip */
+    .lp-demo-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      cursor: pointer;
+      width: 100%;
     }
-    #screen-profile .demo-switch-label {
-      color: rgba(255,255,255,0.45);
-      font-family: 'Space Grotesk', sans-serif;
+    .lp-demo-chip-label {
       font-size: 12px;
+      color: rgba(255,255,255,0.35);
+      flex: 1;
     }
-    #screen-profile .demo-switch-slider {
-      background: rgba(255,255,255,0.04);
-      border-color: rgba(255,255,255,0.15);
+
+    /* Demo switch inside the new chip */
+    .lp-demo-chip .demo-switch {
+      position: relative; width: 36px; height: 20px; flex-shrink: 0;
     }
-    #screen-profile .demo-switch-slider::before {
+    .lp-demo-chip .demo-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .lp-demo-chip .demo-switch-slider {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .lp-demo-chip .demo-switch-slider::before {
+      content: '';
+      position: absolute; top: 3px; left: 3px;
+      width: 12px; height: 12px;
       background: rgba(255,255,255,0.3);
+      border-radius: 50%;
+      transition: all 0.18s;
     }
-    #screen-profile .demo-switch input:checked + .demo-switch-slider {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.4);
+    .lp-demo-chip .demo-switch input:checked + .demo-switch-slider {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.35);
     }
-    #screen-profile .demo-switch input:checked + .demo-switch-slider::before {
+    .lp-demo-chip .demo-switch input:checked + .demo-switch-slider::before {
+      transform: translateX(16px);
       background: #fff;
-      box-shadow: 0 0 8px rgba(255,255,255,0.4);
     }
+
+    /* API key input */
+    .lp-api-input {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.7);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      width: 100%;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.18s;
+      margin-top: -4px;
+    }
+    .lp-api-input:focus { border-color: rgba(255,255,255,0.18); }
+    .lp-api-input::placeholder { color: rgba(255,255,255,0.2); }
+
+    /* ── SlideUp stagger animations ── */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .lp-anim {
+      opacity: 0;
+      animation: slideUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    .lp-anim-1  { animation-delay: 0.05s; }
+    .lp-anim-2  { animation-delay: 0.12s; }
+    .lp-anim-3  { animation-delay: 0.19s; }
+    .lp-anim-4  { animation-delay: 0.26s; }
+    .lp-anim-5  { animation-delay: 0.33s; }
+    .lp-anim-6  { animation-delay: 0.40s; }
+    .lp-anim-7  { animation-delay: 0.47s; }
+    .lp-anim-8  { animation-delay: 0.54s; }
+    .lp-anim-9  { animation-delay: 0.61s; }
+    .lp-anim-10 { animation-delay: 0.68s; }
 
     /* =============================================
        SCREEN 3 — MAIN DASHBOARD
@@ -1664,71 +1821,104 @@
 <body>
 
   <!-- ==========================================
-       SCREEN 1: LOADING / BOOT
-  =========================================== -->
-  <!-- ==========================================
        SCREEN 1: LANDING / PROFILE SELECTION
   =========================================== -->
   <div id="screen-profile" class="screen active">
-    <!-- Animated spotlight blobs -->
-    <div class="spotlight-overlay">
-      <div class="spotlight-blob spotlight-blob--left"></div>
-      <div class="spotlight-blob spotlight-blob--mid"></div>
-      <div class="spotlight-blob spotlight-blob--right"></div>
+
+    <!-- Animated background layer -->
+    <div class="bg">
+      <div class="bg-grid"></div>
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+      <div class="orb orb-4"></div>
+      <div class="scan-h"></div>
+      <div class="scan-v"></div>
+      <!-- 12 rising particles -->
+      <div class="particle" style="left:8%;  animation-duration:12s; animation-delay:0s;    width:2px; height:2px;"></div>
+      <div class="particle" style="left:18%; animation-duration:16s; animation-delay:2s;    width:1px; height:1px;"></div>
+      <div class="particle" style="left:27%; animation-duration:10s; animation-delay:4s;    width:2px; height:2px;"></div>
+      <div class="particle" style="left:38%; animation-duration:14s; animation-delay:1s;    width:1px; height:1px;"></div>
+      <div class="particle" style="left:49%; animation-duration:18s; animation-delay:6s;    width:2px; height:2px;"></div>
+      <div class="particle" style="left:57%; animation-duration:11s; animation-delay:3s;    width:1px; height:1px;"></div>
+      <div class="particle" style="left:65%; animation-duration:15s; animation-delay:5s;    width:2px; height:2px;"></div>
+      <div class="particle" style="left:73%; animation-duration:13s; animation-delay:0.5s;  width:1px; height:1px;"></div>
+      <div class="particle" style="left:81%; animation-duration:17s; animation-delay:7s;    width:2px; height:2px;"></div>
+      <div class="particle" style="left:88%; animation-duration:9s;  animation-delay:2.5s;  width:1px; height:1px;"></div>
+      <div class="particle" style="left:93%; animation-duration:20s; animation-delay:1.5s;  width:2px; height:2px;"></div>
+      <div class="particle" style="left:4%;  animation-duration:13s; animation-delay:8s;    width:1px; height:1px;"></div>
     </div>
 
-    <div class="landing-content">
-      <!-- Logo -->
-      <div class="landing-logo">
-        <div class="landing-logo-mark">AQ</div>
-        <h1 class="landing-wordmark">AdaptIQ</h1>
+    <!-- Left panel -->
+    <div class="lp-left">
+      <div class="lp-logo-row lp-anim lp-anim-1">
+        <div class="lp-logo-mark">AQ</div>
+        <span class="lp-logo-name">AdaptIQ</span>
       </div>
 
-      <p class="landing-subtitle">Who are we adapting for?</p>
+      <h1 class="lp-title lp-anim lp-anim-2">Built around<br>how you think.</h1>
+      <p class="lp-subtitle lp-anim lp-anim-3">Adaptive learning intelligence that reads your focus, presence, and engagement in real time.</p>
 
-      <!-- Config -->
-      <div class="landing-config">
-        <input id="api-key-input" type="password" class="landing-api-input"
-               placeholder="Claude API Key (optional — enables AI responses)" />
-        <label class="demo-switch-row">
-          <span class="demo-switch-label">⚡ Demo Mode — fast calibration, short cooldowns</span>
-          <span class="demo-switch">
-            <input type="checkbox" id="demo-mode-toggle">
-            <span class="demo-switch-slider"></span>
-          </span>
-        </label>
-      </div>
-
-      <!-- Profile cards -->
-      <div class="landing-profiles">
-        <div class="profile-card" data-id="adhd">
-          <div class="profile-card-icon">⚡</div>
-          <div class="profile-card-body">
-            <div class="profile-card-tag">Attention</div>
-            <h3>ADHD</h3>
-            <p>Focus &amp; engagement</p>
-          </div>
-        </div>
-        <div class="profile-card" data-id="anxiety">
-          <div class="profile-card-icon">🌿</div>
-          <div class="profile-card-body">
-            <div class="profile-card-tag">Regulation</div>
-            <h3>Anxiety</h3>
-            <p>Calm &amp; clarity</p>
-          </div>
-        </div>
-        <div class="profile-card" data-id="asd">
-          <div class="profile-card-icon">🔷</div>
-          <div class="profile-card-body">
-            <div class="profile-card-tag">Structure</div>
-            <h3>ASD</h3>
-            <p>Order &amp; progress</p>
-          </div>
-        </div>
-      </div>
-
-      <p class="landing-footnote">AdaptIQ will tailor all interventions and sensitivity thresholds to the selected profile.</p>
+      <button class="lp-cta lp-anim lp-anim-4" id="lp-cta-btn">
+        <span id="lp-cta-text">Select a profile</span>
+        <span class="lp-cta-arrow">→</span>
+      </button>
     </div>
+
+    <!-- Right panel -->
+    <div class="lp-right">
+      <div class="lp-choose-label lp-anim lp-anim-3">Choose your profile</div>
+
+      <div class="profile-card lp-anim lp-anim-4" data-id="adhd">
+        <div class="profile-card-icon"><i class="ti ti-bolt"></i></div>
+        <div class="profile-card-body">
+          <div class="profile-card-tag">Attention</div>
+          <h3>ADHD</h3>
+          <p>Focus &amp; engagement</p>
+        </div>
+      </div>
+
+      <div class="profile-card lp-anim lp-anim-5" data-id="anxiety">
+        <div class="profile-card-icon"><i class="ti ti-heart"></i></div>
+        <div class="profile-card-body">
+          <div class="profile-card-tag">Regulation</div>
+          <h3>Anxiety</h3>
+          <p>Calm &amp; clarity</p>
+        </div>
+      </div>
+
+      <div class="profile-card lp-anim lp-anim-6" data-id="asd">
+        <div class="profile-card-icon"><i class="ti ti-layout-grid"></i></div>
+        <div class="profile-card-body">
+          <div class="profile-card-tag">Structure</div>
+          <h3>Autism / ASD</h3>
+          <p>Order &amp; progress</p>
+        </div>
+      </div>
+
+      <div class="profile-card lp-anim lp-anim-7" data-id="general">
+        <div class="profile-card-icon"><i class="ti ti-user"></i></div>
+        <div class="profile-card-body">
+          <div class="profile-card-tag">General</div>
+          <h3>General</h3>
+          <p>Balanced defaults</p>
+        </div>
+      </div>
+
+      <!-- Demo chip -->
+      <label class="lp-demo-chip lp-anim lp-anim-8">
+        <span class="lp-demo-chip-label">Demo mode — fast calibration</span>
+        <span class="demo-switch">
+          <input type="checkbox" id="demo-mode-toggle">
+          <span class="demo-switch-slider"></span>
+        </span>
+      </label>
+
+      <!-- API key (hidden in right panel, stays in DOM) -->
+      <input id="api-key-input" type="password" class="lp-api-input lp-anim lp-anim-9"
+             placeholder="Claude API Key (optional — enables AI notes)" />
+    </div>
+
   </div>
 
   <!-- ==========================================
